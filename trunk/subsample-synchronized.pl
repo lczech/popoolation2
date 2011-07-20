@@ -17,7 +17,6 @@ my $output="";
 my $help=0;
 my $test=0;
 my $targetcoverage=0;
-my $mincoverage=1;
 my $usermaxcoverage=0; # the user may provide one of the following: 500 or 500,400,300 or 2%
 my $method; #withreplace, withoutreplace, fraction
 
@@ -26,7 +25,6 @@ GetOptions(
     "input=s"	        =>\$input,
     "output=s"          =>\$output,
     "max-coverage=s"    =>\$usermaxcoverage,
-    "min-coverage=i"    =>\$mincoverage,
     "target-coverage=i" =>\$targetcoverage,
     "method=s"          =>\$method,
     "test"              =>\$test,
@@ -49,7 +47,6 @@ open my $pfh, ">",$paramfile or die "Could not open $paramfile\n";
 print $pfh "Using input\t$input\n";
 print $pfh "Using output\t$output\n";
 print $pfh "Using maximum coverage\t$usermaxcoverage\n";
-print $pfh "Using minimum coverage\t$mincoverage\n";
 print $pfh "Using subsample method\t$method\n";
 print $pfh "Using target coverage\t$targetcoverage\n";
 print $pfh "Using test\t$test\n";
@@ -57,7 +54,7 @@ print $pfh "Using help\t$help\n";
 close $pfh;
 
 my $maxcoverage=get_max_coverage($input,$usermaxcoverage);
-my $pp=get_sumsnp_synparser(1,$mincoverage,$maxcoverage);
+my $pp=get_sumsnp_synparser(1,$targetcoverage,$maxcoverage);
 my $subsampler=get_subsampler($method,$targetcoverage);
 
 open my $ifh, "<",$input or die "Could not open input file $input";
@@ -125,11 +122,8 @@ The output file, will be a synchronized file  Mandatory.
 
 =item B<--target-coverage>
 
-Reduce the coverage of the pileup-file to the here provided value; If the coverage is smaller than this the coverage will not be reduced; Mandatory
-
-=item B<--min-coverage>
-
-The minimum coverage; All populations in the synchronized file are required to have the minimum coverage, otherwise the whole entry is ignored; default=1
+Reduce the coverage of the pileup-file to the here provided value; The target coverage also acts as minimum coverage,
+i.e.: if the coverage in any population is smaller than the targetcoverage the whole pileup entry is discarded. Mandatory
 
 =item B<--max-coverage>
 
@@ -163,11 +157,6 @@ A synchronized file
 =head2 Output
 
 The output will be a reduced coverage synchronized file
-
-=head2 Technical Details
-
-In case the actual coverage of a site is smaller than the C<--target-coverage> all subsampling algorithm will return the unaltered allele frequencie, i.e.: no subsampling will be performed.
-
 
 =cut
 
