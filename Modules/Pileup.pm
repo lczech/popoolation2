@@ -47,7 +47,7 @@ sub get_basic_mpileupparser
             my $cov=shift @ar;
             my $nucs=shift @ar;
             my $qual=shift @ar;
-            die "Fucked entry $line" unless $qual;
+            die "Fucked entry $line" unless(defined($qual));
             my $entry=$subparser->($cov,$nucs,$qual,$rc);
             push @$entries,$entry;
         }
