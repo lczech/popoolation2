@@ -9,7 +9,17 @@
     
     require Exporter;
     our @ISA = qw(Exporter);
-    our @EXPORT =qw(format_parsed_pileup get_popcount_forsyncfile format_synchronized);
+    our @EXPORT =qw(format_parsed_pileup get_popcount_forsyncfile format_synchronized syncsample2string);
+    
+    
+    sub syncsample2string
+    {
+        my $sync=shift;
+        
+        
+        my $toret="A" x $sync->{A} . "T" x $sync->{T} . "C" x $sync->{C} . "G" x $sync->{G} . "-" x $sync->{del} . "N" x $sync->{N};
+        return $toret; 
+    }
     
     
     sub format_synchronized
