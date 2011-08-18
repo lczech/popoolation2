@@ -255,13 +255,13 @@ The input file in the synchronized format; Mandatory.
 
 =item B<--output>
 
-The output file, will be a pseude fasta file;  Mandatory.
-NOTE: haplotype information is lost during pooling, therefore the haplotypes found in the fasta file are artefactual!
+The output file, will be a multi-fasta file;  Mandatory.
+NOTE: haplotype information is lost during pooling, therefore the haplotypes found in the fasta file are artifactual!
 
 =item B<--target-coverage>
 
 Reduce the coverage per population to this value; The target coverage also acts as minimum coverage,
-i.e.: if the coverage in any population is smaller than the targetcoverage the whole pileup entry is discarded.
+i.e.: if the coverage in any population is smaller than the targetcoverage the whole entry is discarded.
 The targetcoverage will also be the number of samples per population in the fasta file!
 Mandatory
 
@@ -320,8 +320,8 @@ In the following example the synchronized file contained two populations and the
 
 =head2 Disclaimer
 
-NOTE: during pooling and sequencing the haplotype information is lost. Thus any haplotype structure found in the fasta file is merley an artefact!
-Do not use this multifasta file for any analysis involving haplotypes. Howevert it may be used to measure differentiation between populations/subpopualtions or to calculate Tajima's D, Pi etc
+NOTE: during pooling and sequencing the haplotype information is lost. Thus any haplotype structure found in the fasta file is merley an artifact!
+Do not use this multifasta file for any analysis involving haplotypes. However, it may be used to measure differentiation between populations/subpopualtions or to calculate Tajima's D, Pi etc
 
 =cut
 
