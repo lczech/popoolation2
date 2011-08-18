@@ -271,7 +271,7 @@ perl subsample-sync2GenePop.pl - Convert a given region from a synchronized file
 
 =head1 SYNOPSIS
 
-perl subsample-sync2GenePop.pl --input input.sync --output output.sync --target-coverage 20 --max-coverage 2%  --method withoutreplace --region 2R:10000-20000,40000-50000 --min-count 2
+perl subsample-sync2GenePop.pl --input input.sync --output output.genepop --target-coverage 20 --max-coverage 2%  --method withoutreplace --region 2R:10000-20000,40000-50000 --min-count 2
 
 =head1 OPTIONS
 
@@ -283,18 +283,18 @@ The input file in the synchronized format; Mandatory.
 
 =item B<--output>
 
-The output file, will be a pseude fasta file;  Mandatory.
-NOTE: haplotype information is lost during pooling, therefore the haplotypes found in the fasta file are artefactual!
+The output file, will be a GenePop file;  Mandatory.
+NOTE: haplotype information is lost during pooling, therefore the haplotypes found in the GenePop file are artifactual!
 
 =item B<--min-count>
 
-This script only works for SNPs. To identify a SNP a minimum allele count is required. default=1
+This script only works with SNPs. To identify a SNP a minimum allele count is required. default=1
 
 =item B<--target-coverage>
 
 Reduce the coverage per population to this value; The target coverage also acts as minimum coverage,
-i.e.: if the coverage in any population is smaller than the targetcoverage the whole pileup entry is discarded.
-The targetcoverage will also be the number of samples per population in the fasta file!
+i.e.: if the coverage in any population is smaller than the targetcoverage the whole entry is discarded.
+The targetcoverage will also be the number of samples per population in the GenePop file!
 Mandatory
 
 =item B<--max-coverage>
@@ -321,7 +321,7 @@ For example: '2R:1-100,200-220,240-280' NOTE that the option to provide several 
 
 =item B<--diploid>
 
-Flag; switch to diploid encoding; default=off
+Flag; switch to diploid encoding of the GenePop file; per default it is producing haploid encoding. This option may be important for some convertes as they do not recognize the haploid GenePop file. default=off
 
 =item B<--help>
 
@@ -358,8 +358,8 @@ Following a slightly modified example from the Genepop web page:
 
 =head2 Disclaimer
 
-NOTE: during pooling and sequencing the haplotype information is lost. Thus any haplotype structure found in the fasta file is merley an artefact!
-Do not use this multifasta file for any analysis involving haplotypes. Howevert it may be used to measure differentiation between populations/subpopualtions or to calculate Tajima's D, Pi etc
+NOTE: during pooling and sequencing the haplotype information is lost. Thus any haplotype structure found in the GenePop file is merley an artefact!
+Do not use this GenePop file for any analysis involving haplotypes. However, it may be used to measure differentiation between populations/subpopualtions or to calculate Tajima's D, Pi etc
 
 =cut
 

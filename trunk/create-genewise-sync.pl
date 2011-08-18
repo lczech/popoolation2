@@ -25,7 +25,7 @@ GetOptions(
 
 
 pod2usage(-verbose=>2) if $help;
-VarTest::runTests() if $test;
+die "No test implemented for this scripts" if $test;
 pod2usage(-msg=>"Could not find input file",-verbose=>1) unless -e $input;
 pod2usage(-msg=>"Could not find gtf file",-verbose=>1) unless -e $gtffile;
 pod2usage(-msg=>"Output file not provided",-verbose=>1) unless  $output;
@@ -404,7 +404,7 @@ exit;
 
 =head1 NAME
 
-perl create-genewise-sync.pl - A script which re-organizes a synchronized files into distinct features (e.g.: genes), which allows conducting pairwise comparisions for the specified features.
+perl create-genewise-sync.pl - Re-organizes a synchronized files by changing the coordinate system based on the provided features (e.g.: genes).
 
 =head1 SYNOPSIS
 
@@ -456,10 +456,9 @@ A gtf-file as described here http://mblab.wustl.edu/GTF2.html
  AB000381 Twinscan  exon         700   800   .   +   .  gene_id "AB000381.000"; transcript_id "AB000381.000.1";
  AB000381 Twinscan  CDS          700   707   .   +   2  gene_id "AB000381.000"; transcript_id "AB000381.000.1";
 
-The script is grouping evertying with the same C<gene_id>! The feature field is not considered, so any feature may be used. The strand is not considered;
-The tag C<transcript_id> will be ignored.
-Attention: Do not mix the features exon with transcript/gene since the transcripts span exons and introns!!
-In case features (eg. genes) are overlapping the respective SNP is considered for every feature at a certain position once; 
+The script is grouping all features having the same C<gene_id>! The feature field is not considered, so any feature may be used.
+All features having the same 'gene_id' must also have the same strand. The tag C<transcript_id> will be ignored.
+In case different features (eg. genes) are overlapping the respective entry is considered for every feature at a certain position once; 
 
 =head2 Output
 
