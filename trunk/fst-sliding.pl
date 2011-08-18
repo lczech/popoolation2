@@ -29,7 +29,7 @@ my $step=1000;
 my $mincount=2;
 my $mincoverage=4;
 my $poolsize;
-my $minCoverageFraction=0.6;
+my $minCoverageFraction=0.0;
 my $usermaxcoverage;
 my $asunbiased=0;
 my $suppressna=0;
@@ -284,7 +284,7 @@ The maximum coverage may be provided as one of the following:
 
 =item B<--min-covered-fraction>
 
-the minimum fraction of a window being between min-coverage and max-coverage in ALL populations; float; default=0.6
+the minimum fraction of a window being between min-coverage and max-coverage in ALL populations; float; default=0.0
 
 =item B<--window-size>
 
