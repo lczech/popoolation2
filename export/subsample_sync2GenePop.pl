@@ -18,10 +18,10 @@ my $help=0;
 my $test=0;
 my $targetcoverage=0;
 my $mincount=1;
+my $diploid=0;
 my $userregion="";
 my $usermaxcoverage=0; # the user may provide one of the following: 500 or 500,400,300 or 2%
 my $method; #withreplace, withoutreplace, fraction
-my $regionid="";
 
 # --input /Users/robertkofler/dev/testfiles/sync100000.sync --output /Users/robertkofler/dev/testfiles/output/pseudofasta --method withoutreplace --target-coverage 10 --max-coverage 400 --region 2L:10000-10200
 
@@ -33,6 +33,7 @@ GetOptions(
     "min-count=i"       =>\$mincount,
     "method=s"          =>\$method,
     "region=s"          =>\$userregion,
+    "diploid"           =>\$diploid,
     "test"              =>\$test,
     "help"	        =>\$help
 ) or pod2usage(-msg=>"Wrong options",-verbose=>1);
@@ -47,7 +48,6 @@ pod2usage(-msg=>"Please provide a maximum coverage",-verbose=>1) unless $usermax
 pod2usage(-msg=>"Please provide a target coverage",-verbose=>1) unless $targetcoverage;
 pod2usage(-msg=>"Please provide a sampling method",-verbose=>1) unless $method;
 pod2usage(-msg=>"Please provide a region which should be converted to a multiple fasta",-verbose=>1) unless $userregion; 
-$regionid=$userregion unless $regionid;
 
 
 my $paramfile=$output.".params";
@@ -59,7 +59,7 @@ print $pfh "Using maximum coverage\t$usermaxcoverage\n";
 print $pfh "Using subsample method\t$method\n";
 print $pfh "Using target coverage\t$targetcoverage\n";
 print $pfh "Using region\t$userregion\n";
-print $pfh "Using region-id\t$regionid\n";
+print $pfh "Using diploid data\t$diploid\n";
 print $pfh "Using test\t$test\n";
 print $pfh "Using help\t$help\n";
 close $pfh;
@@ -111,7 +111,7 @@ for my $i (0..($popcount-1))
     {
         my $pop=$snp->{samples}[$i];
         my $subs=$subsampler->($pop);
-        my $gp=Utility::convert_to_genepopencoding($subs);
+        my $gp=Utility::convert_to_genepopencoding($subs,$diploid);
         push @$popar,$gp;
     }
     die "User specified region does not contain any SNPs, can not create GenePop output for no SNPs" unless @$popar;
@@ -177,15 +177,29 @@ exit;
     
     sub convert_to_genepopencoding{
         my $e=shift;
+        my $diploid=shift;
         
         my $cov=$e->{A}+$e->{T}+$e->{C}+$e->{G}+$e->{N}+$e->{del};
         my $toret;
-        push @$toret,"01" foreach (1..$e->{A});
-        push @$toret,"02" foreach (1..$e->{T});
-        push @$toret,"03" foreach (1..$e->{C});
-        push @$toret,"04" foreach (1..$e->{G});
-        push @$toret,"00" foreach (1..$e->{N});
-        push @$toret,"00" foreach (1..$e->{del});
+        if($diploid)
+        {
+            push @$toret,"0101" foreach (1..$e->{A});
+            push @$toret,"0202" foreach (1..$e->{T});
+            push @$toret,"0303" foreach (1..$e->{C});
+            push @$toret,"0404" foreach (1..$e->{G});
+            push @$toret,"0000" foreach (1..$e->{N});
+            push @$toret,"0000" foreach (1..$e->{del});
+        }
+        else
+        {
+            push @$toret,"01" foreach (1..$e->{A});
+            push @$toret,"02" foreach (1..$e->{T});
+            push @$toret,"03" foreach (1..$e->{C});
+            push @$toret,"04" foreach (1..$e->{G});
+            push @$toret,"00" foreach (1..$e->{N});
+            push @$toret,"00" foreach (1..$e->{del});
+        }
+
         
         die "improper size"unless @$toret == $cov;
         return $toret;
@@ -304,6 +318,10 @@ Specify the method for subsampling of the synchronized file. Either: withreplace
 
 Specify the region which should be subsampled; Has to be in the format: 'chr:start-end,start-end,start-end' Mandatory
 For example: '2R:1-100,200-220,240-280' NOTE that the option to provide several regions separated by a comma ',' allows to specify exonic regions
+
+=item B<--diploid>
+
+Flag; switch to diploid encoding; default=off
 
 =item B<--help>
 
