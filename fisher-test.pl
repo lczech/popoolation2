@@ -28,7 +28,7 @@ my $step=1;
 my $mincount=2;
 my $mincoverage=4;
 my $usermaxcoverage;
-my $minCoverageFraction=0.6;
+my $minCoverageFraction=0.0;
 my $suppressna=0;
 
 # -input /Volumes/Main/popoolation2/test.syn -output /Volumes/Main/popoolation2/test.out -min-count 2 -min-coverage 10 -max-coverage 200,300,200,500 -window-size 1 -step-size 1 -min-covered-fraction 0.6    
@@ -251,7 +251,7 @@ The maximum coverage may be provided as one of the following:
 
 =item B<--min-covered-fraction>
 
-the minimum fraction of a window being between min-coverage and max-coverage in ALL populations; float; default=0.6
+the minimum fraction of a window being between min-coverage and max-coverage in ALL populations; float; default=0.0
 
 =item B<--window-size>
 
