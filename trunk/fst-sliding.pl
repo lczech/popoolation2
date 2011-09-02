@@ -368,7 +368,7 @@ The output will be given for every sliding window, e.g.:
  1:3 the pairwise Fst for population 1 and 3
 
 Note to col5: first the minimum coverage for every position is recorded in all populations;
-This min coverage is than subsequently averaged over the whole windows.
+This min coverage is then subsequently averaged over the whole windows.
 It may, for example, happen that the min coverage of position 2L:5 is from population 1 but the min coverage of position 2L:6 from population 2.
 Only positions which are sufficiently covered are considered.
 
