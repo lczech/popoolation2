@@ -53,7 +53,9 @@
         my $syncfile=shift;
         open my $ifh, "<", $syncfile or die "Could not open syncfile";
         my $pp=get_basic_syncparser();
-        my $pl=$pp->(<$ifh>);
+        my $firstline=<$ifh>;
+        chomp $firstline;
+        my $pl=$pp->($firstline);
         my $count=scalar(@{$pl->{samples}});
         close $ifh;
         return $count;
