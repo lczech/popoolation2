@@ -116,7 +116,7 @@ while(my $window=$reader->nextWindow())
         
         my $fsth=$fstCalculator->($window);
         
-        my $sufficientCovered=$coveredFrac>=$minCoverageFraction;
+        my $sufficientCovered = $coveredFrac>=$minCoverageFraction;
         next if(not $sufficientCovered and $suppressna);
         next if(not $snpcount and $suppressna);
         

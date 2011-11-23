@@ -104,6 +104,7 @@
         my $popcount=4;
 
 	my $pvalue = FET::_calculatePvalue($data,$popcount);
+
 	is($pvalue->{"1:2"},0.59479996122477,"Fisher exact test for population1:population2 p-value is correct");
 	is($pvalue->{"1:3"},0.534375091868129,"Fisher exact test for population1:population2 p-value is correct");
 	is($pvalue->{"2:3"},6.26812853259637e-16,"Fisher exact test for population1:population2 p-value is correct");
