@@ -2,7 +2,6 @@
     package Test::TFisher;
     use strict;
     use warnings;
-    use Statistics::R;
     use FindBin qw/$Bin/;
     use lib "$Bin/..";
     use Test;
@@ -105,9 +104,9 @@
         my $popcount=4;
 
 	my $pvalue = FET::_calculatePvalue($data,$popcount);
-	is($pvalue->{"1:2"},-1.36957752402959,"Fisher exact test for population1:population2 p-value is correct");
-	is($pvalue->{"1:3"},-1.23044412060288,"Fisher exact test for population1:population2 p-value is correct");
-	is($pvalue->{"2:3"},-1.4432899320127e-15,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"1:2"},0.59479996122477,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"1:3"},0.534375091868129,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"2:3"},6.26812853259637e-16,"Fisher exact test for population1:population2 p-value is correct");
 
 	# 2
 	$data = [{samples=>[{A=>0,T=>2,C=>52,G=>0,N=>0,del=>0,eucov=>54},{A=>0,T=>0,C=>30,G=>0,N=>0,del=>0,eucov=>30},{A=>0,T=>0,C=>27,G=>0,N=>0,del=>0,eucov=>27},{A=>0,T=>1,C=>33,G=>0,N=>0,del=>0,eucov=>34}],ispuresnp=>1,refchar=>"C"}];
@@ -117,26 +116,26 @@
 	 # 3	 
         $data = [{samples=>[{A=>38,T=>1,C=>0,G=>0,N=>0,del=>0,eucov=>39},{A=>40,T=>0,C=>0,G=>0,N=>0,del=>0,eucov=>40},{A=>16,T=>0,C=>0,G=>0,N=>0,del=>0,eucov=>16},{A=>11,T=>2,C=>0,G=>0,N=>0,del=>0,eucov=>13}],ispuresnp=>1,refchar=>"A"}];
 	$pvalue = FET::_calculatePvalue($data,$popcount);
-	is($pvalue->{"1:3"},-2.87167962488401,"Fisher exact test for population1:population2 p-value is correct");
-	is($pvalue->{"2:3"},-1.64964433291214,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"1:3"},1.24715461488113,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"2:3"},0.716431430886714,"Fisher exact test for population1:population2 p-value is correct");
         
         # 4
         $data = [{samples=>[{A=>2,T=>0,C=>0,G=>84,N=>0,del=>0,eucov=>86},{A=>3,T=>0,C=>0,G=>53,N=>0,del=>0,eucov=>56},{A=>0,T=>0,C=>0,G=>25,N=>0,del=>0,eucov=>25},{A=>2,T=>0,C=>0,G=>30,N=>0,del=>0,eucov=>32}],ispuresnp=>1,refchar=>"G"}];
 	$pvalue = FET::_calculatePvalue($data,$popcount);
-	is($pvalue->{"1:2"},-0.600098431540386,"Fisher exact test for population1:population2 p-value is correct");
-	is($pvalue->{"2:3"},-0.695656592165372,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"1:2"},0.260619437416786,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"2:3"},0.302119819277042,"Fisher exact test for population1:population2 p-value is correct");
         
         # 5
         $data = [{samples=>[{A=>0,T=>74,C=>0,G=>2,N=>0,del=>0,eucov=>76},{A=>0,T=>52,C=>0,G=>4,N=>0,del=>0,eucov=>56},{A=>0,T=>25,C=>0,G=>0,N=>0,del=>0,eucov=>25},{A=>0,T=>26,C=>0,G=>2,N=>0,del=>0,eucov=>28}],ispuresnp=>1,refchar=>"T"}];
 	$pvalue = FET::_calculatePvalue($data,$popcount);
-	is($pvalue->{"1:2"},-1.18488627862888,"Fisher exact test for population1:population2 p-value is correct");
-	is($pvalue->{"2:3"},-0.709241163633209,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"1:2"},0.514589572491402,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"2:3"},0.308019523704544,"Fisher exact test for population1:population2 p-value is correct");
 	
         # 6
         $data = [{samples=>[{A=>76,T=>0,C=>0,G=>0,N=>0,del=>0,eucov=>76},{A=>54,T=>0,C=>0,G=>0,N=>0,del=>0,eucov=>54},{A=>29,T=>0,C=>0,G=>0,N=>0,del=>0,eucov=>29},{A=>33,T=>0,C=>0,G=>2,N=>0,del=>0,eucov=>35}],ispuresnp=>1,refchar=>"A"}];
 	$pvalue = FET::_calculatePvalue($data,$popcount);
-	is($pvalue->{"1:3"},-1.88426459810477,"Fisher exact test for population1:population2 p-value is correct");
-	is($pvalue->{"2:3"},-0.700115849876038,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"1:3"},0.818325717402551,"Fisher exact test for population1:population2 p-value is correct");
+	is($pvalue->{"2:3"},0.304056450294169,"Fisher exact test for population1:population2 p-value is correct");
         
         
     }
