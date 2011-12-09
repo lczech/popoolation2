@@ -152,7 +152,7 @@
         
         $w=$bpsl->nextWindow();
         is($w->{chr},"chr1","test SyncSlider, correct chromosome");
-        is($w->{count_covered},2,"test SyncSlider, correct number of sufficiently covered regions");
+        is($w->{count_covered},1,"test SyncSlider, correct number of sufficiently covered regions");
         is($w->{countpuresnp},1,"test SyncSlider, correct number of snps in region");
         is($w->{start},0,"test SyncSlider, correct start position");
         is($w->{end},3,"test SyncSlider, correct end position");

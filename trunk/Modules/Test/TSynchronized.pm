@@ -137,14 +137,16 @@
         is($r->{issnp},1,"test sumsnp sync parser: SNP calling is OK");
         is($r->{iscov},1,"test sumsnp sync parser: coverage is OK");
         is($r->{ispuresnp},1,"test sumsnp sync parser: SNP is not tainted (by an indel)");
+        is($r->{ignore},0,"test sumsnp sync parser: ignore flag set correctly");
         
         
         # indels
         $p=get_sumsnp_synparser(3,3,[20,10]);
         $r=$p->("chr1\t1\tN\t11:0:0:0:0:3\t0:5:0:0:0:0");
-        is($r->{issnp},1,"test sumsnp sync parser: SNP calling is OK");
-        is($r->{iscov},1,"test sumsnp sync parser: coverage is OK");
+        is($r->{issnp},0,"test sumsnp sync parser: SNP calling is OK");
+        is($r->{iscov},0,"test sumsnp sync parser: coverage is OK");
         is($r->{ispuresnp},0,"test sumsnp sync parser: SNP is not tainted (by an indel)");
+        is($r->{ignore},1,"test sumsnp sync parser: ignore flag set correctly");
     }
     
     

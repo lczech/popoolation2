@@ -127,11 +127,18 @@
         $issnp=0 unless $is_suficient_covered; # no SNP will ever be allowed at a position which is not sufficiently covered in all data files!!
         
         # the SNP is tainted if there are any deletions at the given position
-        my $taintedsnp=($cdel >= $mincount)? 1:0;
+        my $taintedsnp = ($cdel >= $mincount)? 1:0;
         
+        $p->{ignore}=$taintedsnp;
         $p->{iscov}=$is_suficient_covered;
         $p->{issnp}=$issnp;
-        $p->{ispuresnp}=($p->{issnp} and not $taintedsnp)?1:0;
+        $p->{ispuresnp}=$p->{issnp};
+        if($taintedsnp)
+        {
+            $p->{iscov}=0;
+            $p->{ispuresnp}=0;
+            $p->{issnp}=0;
+        }
         
         # iscov, issnp, ispuresnps
         # chr, pos, refchar, minsampcov, samples (A T C G N del)
