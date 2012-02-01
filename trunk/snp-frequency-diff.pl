@@ -40,6 +40,7 @@ pod2usage(-msg=>"Input file does not exist",-verbose=>1) unless -e $input;
 pod2usage(-msg=>"No output file has been provided",-verbose=>1) unless $outputprefix;
 pod2usage(-msg=>"Minimum coverage <1 not allowed",-verbose=>1) if $mincoverage<1;
 pod2usage(-msg=>"Provide a maximum coveage",-verbose=>1) unless $usermaxcoverage;
+pod2usage(-msg=>"Minimumc count needs to be at least 1") unless $mincount;
 
 my $paramfile=$outputprefix.".params";
 open my $pfh, ">",$paramfile or die "Could not open $paramfile\n";
