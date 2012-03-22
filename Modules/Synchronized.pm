@@ -102,7 +102,7 @@
                 my $s=$samp[$i];
                 my $maxcov=$maxcoverage->[$i];
                 my $iscov=1;
-                $iscov=0 if($s->{eucov}<$mincoverage || $s->{eucov}>=$maxcov);
+                $iscov=0 if($s->{eucov}<$mincoverage || $s->{eucov}>$maxcov);
                 $s->{iscov}=$iscov;
                 $ca+= $s->{A};
                 $ct+= $s->{T};

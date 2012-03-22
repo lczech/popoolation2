@@ -23,6 +23,7 @@ my $help=0;
 my $test=0;
 my $verbose=1;
 
+my $winSumMethod="multiply";
 my $windowsize=1;
 my $step=1;
 my $mincount=2;
@@ -42,6 +43,7 @@ GetOptions(
     "window-size=i"  			=>\$windowsize,
     "step-size=i"   			=>\$step,
     "min-covered-fraction=f"		=>\$minCoverageFraction,
+    "window-summary-method=s"		=>\$winSumMethod,
     "suppress-noninformative"       	=>\$suppressna,
     "test"          			=>\$test,
     "help"	    			=>\$help
@@ -52,6 +54,8 @@ pod2usage(-msg=>"Wrong options",-verbose=>1) if @ARGV;
 pod2usage(-verbose=>2) if $help;
 FETTest::runTests() && exit if $test;
 
+$winSumMethod=lc($winSumMethod);
+pod2usage(-msg=>"Invalid Window Summary method") if($winSumMethod ne "multiply" and $winSumMethod ne "geometricmean" and $winSumMethod ne "median");
 pod2usage(-msg=>"Input file does not exist",-verbose=>1) unless -e $input;
 pod2usage(-msg=>"No output file has been provided",-verbose=>1) unless $output;
 pod2usage(-msg=>"Minimum coverage <1 not allowed",-verbose=>1) if $mincoverage<1;
@@ -67,6 +71,7 @@ print $pfh "Using min-coverage\t$mincoverage\n";
 print $pfh "Using max-coverage\t$usermaxcoverage\n";
 print $pfh "Using window-size\t$windowsize\n";
 print $pfh "Using step-size\t$step\n";
+print $pfh "using window summary method\t$winSumMethod\n";
 print $pfh "Using min-covered-fraction\t$minCoverageFraction\n";
 print $pfh "Using test\t$test\n";
 print $pfh "Using help\t$help\n";
@@ -74,13 +79,9 @@ close $pfh;
 
 
 
-
-
-
 open my $ofh, ">$output" or die "Could not open output file";
 
 my $maxcoverage=get_max_coverage($input,$usermaxcoverage);
-
 my $reader;
 $reader=SyncSlider->new($input,$windowsize,$step,$mincount,$mincoverage,$maxcoverage);
 
@@ -88,7 +89,7 @@ $reader=SyncSlider->new($input,$windowsize,$step,$mincount,$mincoverage,$maxcove
 my $popcount=$reader->count_samples();
 
 my $fetCalculator;
-$fetCalculator=FET::get_fetcalculator($popcount);
+$fetCalculator=FET::get_fetcalculator($popcount,$winSumMethod);
 
 
 while(my $window=$reader->nextWindow())
@@ -260,6 +261,10 @@ the size of the sliding window. Measured in C<--window-unit>; default=1
 =item B<--step-size>
 
 the size of the sliding window steps. Measured in C<--window-unit>; default=1
+
+=item B<--window-summary-method>
+
+Specify the method by which the p-values of individual SNPs should be summarized; possible: geometricmean | median | multiply; default=multiply
 
 =item B<--suppress-noninformative>
 
