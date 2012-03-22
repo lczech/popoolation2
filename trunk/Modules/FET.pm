@@ -12,10 +12,14 @@
         require Exporter;
         our @ISA = qw(Exporter);
         our @EXPORT=qw(get_fetcalculator);
+	
+	
     
-	sub get_fetcalculator {
+	sub get_fetcalculator{
 	    
-	    my ($popcount)=@_;
+	    my $popcount=shift;
+	    my $winSumMethod=shift;
+	    
 	    return sub
 	    {
 		my ($window)=@_;
@@ -25,13 +29,13 @@
 		die "No data for window $window->{chr}" unless $data;
 		my $snps= [grep {$_->{ispuresnp}} @$data];
 	    
-		FET::_calculatePvalue($snps,$popcount);
+		FET::_calculatePvalue($snps,$popcount,$winSumMethod);
 	    }
 	}
 	
 	sub _calculatePvalue
 	{
-	    my ($data,$popcount) = @_;
+	    my ($data,$popcount,$winSumMethod) = @_;
     
 	    my $toret = {};
 	    my $snpcount=@$data; 
@@ -83,26 +87,30 @@
 		
 		for my $id (@$index) {
 		    
-		    my $product_pvalue=0;
-		    
-		    foreach my $snp (@$allsnps) {
-			#print "$id:$snp->{$id}\t";	
-			last if $product_pvalue eq "inf";
-			
-			my $pval=$snp->{$id};
-		
-			if($pval>0)
-			{
-				my $temp=log($pval)/log(10);
-				$product_pvalue+=$temp;
-			}
-			else
-			{
-				$product_pvalue="inf";
-			}
+		    my @pvalues=();
+		    foreach my $snp (@$allsnps)
+		    {
+			push @pvalues,$snp->{$id};
 		    }
 		    
-		    $product_pvalue = $product_pvalue * -1 if $product_pvalue <0;
+		    my $product_pvalue;
+		    if($winSumMethod eq "multiply")
+		    {
+			$product_pvalue = multiply(\@pvalues);
+		    }
+		    elsif($winSumMethod eq "median")
+		    {
+			$product_pvalue = median(\@pvalues);
+		    }
+		    elsif($winSumMethod eq "geometricmean")
+		    {
+			$product_pvalue = geometricmean(\@pvalues);
+		    }
+		    else
+		    {
+			die "unrecognised method $winSumMethod";
+		    }
+		    
 		    $toret->{$id}= $product_pvalue;
 		}
 	    }
@@ -111,7 +119,111 @@
 	}
 	
 	
+	sub multiply
+	{
+		my $pvalues=shift;
+		return "na" unless @$pvalues;
+		my $toret=0;
+		foreach my $pv (@$pvalues)
+		{
+			if($pv>0)
+			{
+				my $tmp=log($pv)/log(10);	
+				$toret+=$tmp;
+			}
+			else
+			{
+				return "inf";
+			}
+		}
+		$toret*=-1 if $toret<0;
+		return $toret;
+	}
+	
+	sub geometricmean
+	{
+		my $pvalues=shift;
+		return "na" unless @$pvalues;
+		my $toret=0;
+		foreach my $pv (@$pvalues)
+		{
+			if($pv>0)
+			{
+				my $tmp=log($pv)/log(10);	
+				$toret+=$tmp;				
+			}
+			else
+			{
+				return "inf";
+			}
+		}
+		my $count=@$pvalues;
+		$toret=$toret/$count;
+		$toret*=-1 if $toret<0;
+		return $toret;
+	}
+	
+	sub median
+	{
+		my $pvalues=shift;
+		return "na" unless @$pvalues;
+		
+		$pvalues=[sort {$a<=>$b} @$pvalues];
+		my $count=@$pvalues;
+		my $index=0;
+		my $midcount=int($count/2);
+		if($count%2==0)
+		{
+			my @tp=();
+			push @tp,$pvalues->[$midcount-1];
+			push @tp,$pvalues->[$midcount];
+			return geometricmean(\@tp);
+		}
+		else
+		{
+			my @tp=();
+			push @tp,$pvalues->[$midcount];
+			return geometricmean(\@tp);
+		}
+	}
+
+## ori
+	#    else {
+	#	
+	#	for my $id (@$index) {
+	#	    
+	#	    my $product_pvalue=0;
+	#	    
+	#	    foreach my $snp (@$allsnps) {
+	#		#print "$id:$snp->{$id}\t";	
+	#		last if $product_pvalue eq "inf";
+	#		
+	#		my $pval=$snp->{$id};
+	#	
+	#		if($pval>0)
+	#		{
+	#			my $temp=log($pval)/log(10);
+	#			$product_pvalue+=$temp;
+	#		}
+	#		else
+	#		{
+	#			$product_pvalue="inf";
+	#		}
+	#	    }
+	#	    
+	#	    $product_pvalue = $product_pvalue * -1 if $product_pvalue <0;
+	#	    $toret->{$id}= $product_pvalue;
+	#	}
+	#    }
+	#    
+	#    return $toret;
+	#}
+	
+	
+	
 	sub _get_snpwise_pvalue {
+	# for a given SNP, a given major allele and a given minor allele
+	# a specified pairwise comparision
     
 	    my ($index,$snp,$major,$minor,$popcount) = @_;
 	    
