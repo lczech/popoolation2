@@ -24,11 +24,22 @@ public class MpileupParser {
 		char refChar=c[2].charAt(0);
 		
 		ArrayList<SyncPop> populations=new ArrayList<SyncPop>();
-		for(int i=4; i<c.length; i+=2)
+		for(int i=3; i<c.length; i+=3)
 		{
-			String seq=c[i];
-			String qual=c[i+1];
-			SyncPop sp =getSyncPop(seq,qual,refChar);
+			// c[i] == coverage
+			int cov=Integer.parseInt(c[i]);
+			SyncPop sp;
+			if(cov > 0)
+			{
+				String seq=c[i+1];
+				String qual=c[i+2];
+				sp =getSyncPop(seq,qual,refChar);
+			}
+			else
+			{
+				sp=new SyncPop(0,0,0,0,0,0);
+			}
+
 			populations.add(sp);
 		}
 		return new SyncLine(chromosome,position,refChar,populations);
@@ -36,7 +47,7 @@ public class MpileupParser {
 	
 	private SyncPop getSyncPop(String seq, String qual,char refchar)
 	{
-		if(seq.equals("-")) return new SyncPop(0,0,0,0,0,0);
+		if(seq.equals('-')) return new SyncPop(0,0,0,0,0,0);
 		char[] seqca=seq.toCharArray();
 		char[] qualca = qual.toCharArray();
 		
@@ -50,7 +61,9 @@ public class MpileupParser {
 			char s=purgedseq.get(i);
 			char q=qualca[i];
 			int bqual=translateQuality(q);
-			if(bqual<this.minimumQuality) continue;
+			
+			// Discard bases not having the minimum quality
+			if(bqual < this.minimumQuality) continue;
 			
 			if(s== '.' || s==',') s=refchar;
 			
@@ -72,11 +85,11 @@ public class MpileupParser {
 	{
 		int raw=(int)c;
 		int qual=0;
-		if(this.qualityEncoding==QualityEncoding.Illumina)
+		if(this.qualityEncoding==QualityEncoding.Sanger)
 		{
 			qual= (raw-33);
 		}
-		else if(this.qualityEncoding==QualityEncoding.Sanger)
+		else if(this.qualityEncoding==QualityEncoding.Illumina)
 		{
 			qual= (raw-64);
 		}
