@@ -52,8 +52,10 @@ public class Mpileup2SyncFramework {
 		while((batch=br.getBatch()).length>0)
 		{
 			String[] syncBatch=new BatchProcessor(batch,parser,executor).processBatch();
+			assert(syncBatch.length==batch.length);
 			bw.writeBatch(syncBatch);
 		}
+		
 		br.close();
 		bw.close();
 		

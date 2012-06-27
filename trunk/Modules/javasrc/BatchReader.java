@@ -27,7 +27,7 @@ public class BatchReader {
 		{
 			String line;
 			int eCount=0;
-			while((line=sr.readLine())!=null && eCount < this.blockSize)
+			while(eCount < this.blockSize && (line=sr.readLine())!=null)
 			{
 				toret.add(line);
 				eCount++;

@@ -32,12 +32,12 @@ public class CommandLineParser
         {
             output=args.remove(0);
         }        
-        else if(cu.equals("--quality-encoding"))
+        else if(cu.equals("--fastq-type"))
         {
             String rawQualEncoding=args.remove(0);
             qualEncoding=translateQualityEncoding(rawQualEncoding);
         }
-        else if(cu.equals("--minimum-quality"))
+        else if(cu.equals("--min-qual"))
         {
             minimumQual=Integer.parseInt(args.remove(0));
         }
@@ -90,8 +90,8 @@ public class CommandLineParser
 		sb.append("mpileup2sync: converts a mpileup file into a synchronized file\n");
 		sb.append("--input					the input file in the mpileup format; mandatory\n");
 		sb.append("--output					the output file, will be a synchronized file; mandatory\n");
-		sb.append("--quality-encoding			the encoding of the quality sequences; sanger|illumina; default=sanger\n");
-		sb.append("--minimum-quality			the minimum base quality to filter for; default=0\n");
+		sb.append("--fastq-type			the encoding of the quality sequences; sanger|illumina; default=sanger\n");
+		sb.append("--min-qual			the minimum base quality to filter for; default=0\n");
 		sb.append("--threads					number of threads to use; default=1\n");
 		sb.append("--help					display the help pages\n");
 		return sb.toString();
