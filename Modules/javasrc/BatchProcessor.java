@@ -1,7 +1,6 @@
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 public class BatchProcessor 
 {
 	private final String[] batch;
@@ -24,18 +23,29 @@ public class BatchProcessor
 			call.add(Executors.callable(new ProcessSingleEntry(this.batch[i],i,batchCol, parser)));
 		}
 		
+
 		try
 		{	
 			// Run them all!
-			executor.invokeAll(call);	
+			 executor.invokeAll(call);	
 		}
 		catch(InterruptedException e)
 		{
 			e.printStackTrace();
 			System.exit(0);
 		}
-		
-		return batchCol.getBatch();
+		String[] batch=batchCol.getBatch();
+		for(String s:batch)
+		{
+			if(s==null)
+			{
+					executor.shutdownNow();
+					throw new IllegalArgumentException("An error occured during parsing of the mpileup;\n"+
+							"Please make sure you are a.) using the correct encoding and b.) using the correct mpileup format");
+			}
+			}
+			
+		return batch;
 	}
 
 }
