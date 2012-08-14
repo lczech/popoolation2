@@ -114,7 +114,7 @@ sub get_max_coverage
         }
         print "Finished identifying maximum coverages\n";
         my $maxstr=join(",",@$maxcoverages);
-        print "Result: '--max-coverage $pcoutlier%' is equivalent to '--max-coverage $maxstr'\n";
+        print "use: '--max-coverage $maxstr'\n";
 
         return $maxcoverages;
     }
