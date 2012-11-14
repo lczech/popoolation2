@@ -9,7 +9,7 @@
     
     require Exporter;
     our @ISA = qw(Exporter);
-    our @EXPORT =qw(format_parsed_pileup get_popcount_forsyncfile format_synchronized syncsample2string);
+    our @EXPORT =qw(format_parsed_pileup get_popcount_forsyncfile format_synchronized syncsample2string resolve_selected_populations);
     
     
     sub syncsample2string
@@ -63,6 +63,38 @@
         
     }
     
+    sub resolve_selected_populations
+    {
+        my $syncfile=shift;
+        my $selected_pop=shift;
+        
+        my $popCpunt = get_popcount_forsyncfile($syncfile);
+        
+        my $populations=[];
+	my @temp=split /,/,$selected_pop;
+		foreach my $t (@temp)
+		{
+                    chomp($t);
+		    push @$populations,$t;
+		}
+        @$populations = sort { $a <=> $b } @$populations;
+        
+        my $first_pop=0;
+        my $last_pop=0;
+        
+        $first_pop=$populations->[0];
+        $last_pop=$populations->[-1];
+        if ($first_pop< 1) {
+            die "Any selected population in --select-population parameter can not be smallar than 1 (user provided --select-population $selected_pop)\n";
+        }
+        
+        if ($last_pop> $popCpunt) {
+            die "Any selected population in --select-population parameter can not be greater than available populations. (user provided --select-population $selected_pop)\n There are only $popCpunt populations available in input file:$syncfile\n";
+        }
+ 
+        return $populations;
+
+    }
 
 
 }

@@ -28,7 +28,7 @@
 		my $data=$window->{data};
 		die "No data for window $window->{chr}" unless $data;
 		my $snps= [grep {$_->{ispuresnp}} @$data];
-	    
+		
 		FET::_calculatePvalue($snps,$popcount,$winSumMethod);
 	    }
 	}
@@ -70,6 +70,7 @@
 		    $snp->{$i}=$t;
 		}
 		
+		
 		my $snp_pvalue = FET::_get_snpwise_pvalue($index,$snp,$major,$minor,$popcount);
 		push @$allsnps,$snp_pvalue;
 	    }
@@ -84,7 +85,6 @@
 		}
 	    }
 	    else {
-		
 		for my $id (@$index) {
 		    
 		    my @pvalues=();
@@ -110,7 +110,6 @@
 		    {
 			die "unrecognised method $winSumMethod";
 		    }
-		    
 		    $toret->{$id}= $product_pvalue;
 		}
 	    }
@@ -241,7 +240,6 @@
                 $pvalue = FET::_get_Fisher_twotailed_pvalue($major1,$major2,$minor1,$minor2);
 		$snp_pvalue->{$id}=$pvalue;
 	    }
-	    
 	    return $snp_pvalue;
 	    
 	}
@@ -278,7 +276,6 @@
             {
               $pvalue = $twotailed_value;
             }
-            
             return $pvalue;
     
         

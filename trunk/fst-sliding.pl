@@ -39,7 +39,7 @@ my $suppressna=0;
 GetOptions(
     "input=s"	        =>\$input,
     "output=s"	        =>\$output,
-    "min-count=i"       =>\$mincount,
+    "min-count=s"       =>\$mincount,
     "min-coverage=i"    =>\$mincoverage,
     "max-coverage=s"    =>\$usermaxcoverage,
     "min-covered-fraction=f"    =>\$minCoverageFraction,
@@ -60,7 +60,7 @@ pod2usage(-msg=>"Input file does not exist",-verbose=>1) unless -e $input;
 pod2usage(-msg=>"No output file has been provided",-verbose=>1) unless $output;
 pod2usage(-msg=>"Minimum coverage <1 not allowed",-verbose=>1) if $mincoverage<1;
 pod2usage(-msg=>"Poolsize has to be provided",-verbose=>1) unless $poolsize;
-pod2usage(-msg=>"Minimum coverage must be equal or larger than minimum count",-verbose=>1) unless $mincoverage>= $mincount;
+#pod2usage(-msg=>"Minimum coverage must be equal or larger than minimum count",-verbose=>1) unless $mincoverage>= $mincount;
 pod2usage(-msg=>"Maximum coverage has to be provided",-verbose=>1) unless $usermaxcoverage;
 
 my $paramfile=$output.".params";
@@ -267,7 +267,12 @@ flag; switch to an alternative method for calculating the pairwise fst which was
 
 =item B<--min-count>
 
-the minimum count of the minor allele. used for SNP identification. SNPs will be identified considering all populations simultanously. default=2
+the minimum count of the minor allele; used for SNP identification. SNPs will be identified considering all populations simultanously. default=2
+The minimum count may be provided as one of the following two ways:
+
+ '2' The minimum count of the minor allele should be atleast 2 or higher across all populations.
+ '2%' The minimum minor allele frequency should be atleast 2% or higher across all populations.
+Please note that when you are using min-count in percent then the run time will increase. Because for each loci program will calculate frequency of 4 alleles.
 
 =item B<--min-coverage>
 
