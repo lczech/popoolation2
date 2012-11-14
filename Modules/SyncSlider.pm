@@ -91,6 +91,9 @@
                 $self->_bufferline($line);
                 last FILL;
             }
+            if ($line eq "") {
+                last FILL;
+            }
         }
         
         return undef unless $curChr;
@@ -153,6 +156,7 @@
         my $avmincov=0;
         foreach(@$curwin)
         {
+            print "ispuresnp: $_->{ispuresnp}\n";
             $snps++ if $_->{ispuresnp};
             if($_->{iscov})
             {

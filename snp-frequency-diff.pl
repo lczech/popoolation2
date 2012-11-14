@@ -8,6 +8,7 @@ use File::Basename; # to get the file path, file name and file extension
 use FindBin qw/$RealBin/;
 use lib "$RealBin/Modules";
 use List::Util qw[min max];
+use SynchronizeUtility;
 use MaxCoverage;
 
 
@@ -19,15 +20,17 @@ my $test=0;
 my $mincount=2;
 my $mincoverage=4;
 my $usermaxcoverage;
+my $selectpopulation="";
 my $regionEncoded="";
 
 
 GetOptions(
     "input=s"	        =>\$input,
     "output-prefix=s"   =>\$outputprefix,
-    "min-count=i"       =>\$mincount,
+    "min-count=s"       =>\$mincount,
     "min-coverage=i"    =>\$mincoverage,
     "max-coverage=s"    =>\$usermaxcoverage,
+    "select-population=s"  =>\$selectpopulation,
     "region=s"          =>\$regionEncoded,
     "test"              =>\$test,
     "help"	        =>\$help
@@ -49,6 +52,10 @@ print $pfh "Using outputprefix\t$outputprefix\n";
 print $pfh "Using min-count\t$mincount\n";
 print $pfh "Using min-coverage\t$mincoverage\n";
 print $pfh "Using max-coverage\t$usermaxcoverage\n";
+if ($selectpopulation) {
+    print $pfh "Using select-population\t$selectpopulation\n";
+}
+
 print $pfh "Using region\t$regionEncoded\n";
 print $pfh "Using test\t$test\n";
 print $pfh "Using help\t$help\n";
@@ -59,13 +66,20 @@ open my $ifh, "<", $input or die "Could not open input file";
 open my $ofhrc, ">", $output_rc or die "Could not open output file";
 open my $ofhpw, ">", $output_pw or die "Could not open output file";
 
+
+my $selected_population = [];
+if ($selectpopulation) {
+	$selected_population = resolve_selected_populations($input,$selectpopulation);
+}
+
+
 # parse the region if provided
 my $region=undef;
 $region=Utility::parse_region($regionEncoded) if $regionEncoded;
 
 
 my $maxcoverage=get_max_coverage($input,$usermaxcoverage);
-my $parser=Utility::get_lightwightparser($mincount,$mincoverage,$maxcoverage);
+my $parser=Utility::get_lightwightparser($mincount,$mincoverage,$maxcoverage,$selected_population);
 
 # header definition
 my $headerwriten=0;
@@ -80,7 +94,7 @@ while(my $line = <$ifh>)
         my @data=split /\s+/,$line;
         shift @data; shift @data; shift @data;
         $samples=@data;
-        my($header_rc,$header_pw)=Utility::get_header($samples);
+        my($header_rc,$header_pw)=Utility::get_header($samples,$selected_population);
         print $ofhrc $header_rc."\n";
         print $ofhpw $header_pw."\n";
         $headerwriten=1;
@@ -101,11 +115,11 @@ while(my $line = <$ifh>)
     # print
     # chr, pos, rc, snptype[rc,pop,rc|pop], delsum, T:1.000:27/29 ...  A   0.112:17/19:67/70   0.222:30/35:40/45 
     
-    my($pwc,$pwcomp)=Utility::get_pairwise_comp($hit,$samples);
+    my($pwc,$pwcomp)=Utility::get_pairwise_comp($hit,$samples,$selected_population);
     $hit->{pwchar}=$pwc; # pairwise character
     $hit->{pwcomp}=$pwcomp; # pairwise comparisions
     
-    my($toprint_rc,$toprint_pw)=Utility::formatOutput($hit);
+    my($toprint_rc,$toprint_pw)=Utility::formatOutput($hit,$selected_population);
     print $ofhrc $toprint_rc."\n";
     print $ofhpw $toprint_pw."\n";
 }
@@ -125,7 +139,9 @@ exit;
     {
         # rc: chr, pos, rc, alleles, alstring, delsum, snp-type, consstring, subconsstring, consfreq, subconsfreq
         # rc: chr, pos, rc, alleles, alstring, delsum, snp-type, most_diverged_char, pwfreqdif
-        my $hit=shift; 
+        my $hit=shift;
+        my $selected_population=shift;
+        
         my $toprint_rc="$hit->{chr}\t$hit->{pos}\t$hit->{refchar}\t$hit->{alleles}\t$hit->{alstring}\t$hit->{delsum}\t";
         my $toprint_pw="$hit->{chr}\t$hit->{pos}\t$hit->{refchar}\t$hit->{alleles}\t$hit->{alstring}\t$hit->{delsum}\t";
         
@@ -160,32 +176,68 @@ exit;
         my @consfreq=();
         my @subconsfreq=();
         
-        foreach my $d (@$data)
+        if (scalar(@$selected_population)>0)
         {
-            # A, T, C, G, N, del, eucov, totcov, valid_cov (totcov), a_desc
-            my $a_desc=$d->{a_desc};
-            my $valid_cov=$d->{iscov};
-            my $cons=$a_desc->[0];
-            my $subcons=$a_desc->[1];
-            
-            my $consc=$cons->{a};
-            my $consf=$cons->{c};
-            my $subconsc=$subcons->{a};
-            my $subconsf=$subcons->{c};
-            
-            unless($valid_cov)
-            {
-                $consc="N"; $subconsc="N"; $consf=0; $subconsf=0;
+            foreach my $popindex (@$selected_population) {
+                my $i=$popindex-1;
+                my $d=$data->[$i];
+                
+                # A, T, C, G, N, del, eucov, totcov, valid_cov (totcov), a_desc
+                my $a_desc=$d->{a_desc};
+                my $valid_cov=$d->{iscov};
+                my $cons=$a_desc->[0];
+                my $subcons=$a_desc->[1];
+                
+                my $consc=$cons->{a};
+                my $consf=$cons->{c};
+                my $subconsc=$subcons->{a};
+                my $subconsf=$subcons->{c};
+                
+                unless($valid_cov)
+                {
+                    $consc="N"; $subconsc="N"; $consf=0; $subconsf=0;
+                }
+                $subconsc="N" unless $subconsf;
+                $consc="N" unless $consf;
+                $consf="$consf/$d->{eucov}";
+                $subconsf="$subconsf/$d->{eucov}";
+                
+                $consstring.=$consc;
+                $subconsstring.=$subconsc;
+                push @consfreq,$consf;
+                push @subconsfreq,$subconsf;
+
             }
-            $subconsc="N" unless $subconsf;
-            $consc="N" unless $consf;
-            $consf="$consf/$d->{eucov}";
-            $subconsf="$subconsf/$d->{eucov}";
-            
-            $consstring.=$consc;
-            $subconsstring.=$subconsc;
-            push @consfreq,$consf;
-            push @subconsfreq,$subconsf;
+        }
+        else
+        {
+            foreach my $d (@$data)
+            {
+                # A, T, C, G, N, del, eucov, totcov, valid_cov (totcov), a_desc
+                my $a_desc=$d->{a_desc};
+                my $valid_cov=$d->{iscov};
+                my $cons=$a_desc->[0];
+                my $subcons=$a_desc->[1];
+                
+                my $consc=$cons->{a};
+                my $consf=$cons->{c};
+                my $subconsc=$subcons->{a};
+                my $subconsf=$subcons->{c};
+                
+                unless($valid_cov)
+                {
+                    $consc="N"; $subconsc="N"; $consf=0; $subconsf=0;
+                }
+                $subconsc="N" unless $subconsf;
+                $consc="N" unless $consf;
+                $consf="$consf/$d->{eucov}";
+                $subconsf="$subconsf/$d->{eucov}";
+                
+                $consstring.=$consc;
+                $subconsstring.=$subconsc;
+                push @consfreq,$consf;
+                push @subconsfreq,$subconsf;
+            }
         }
         
         my $consfreqstring=join("\t",@consfreq);
@@ -212,10 +264,80 @@ exit;
     {
         my $hit=shift;
         my $samples=shift;
+        my $selected_population=shift;
         my $data=$hit->{samples};
         
+
         my @alleles=( {a=>"A",c=>0} , {a=>"T",c=>0} , {a=>"C",c=>0} , {a=>"G",c=>0} );
+        my $pwc="";
+        my @pwcomp=();
         
+        if (scalar(@$selected_population)>0) {
+            
+            for (my $i=0;$i<scalar(@$selected_population);$i++)
+            {
+                my $i1=$selected_population->[$i]-1;
+                
+                for (my $k=$i+1;$k<scalar(@$selected_population);$k++)
+                {
+                    my $k1 = $selected_population->[$k]-1;
+                    my $e1=$data->[$i1];
+                    my $e2=$data->[$k1];
+                    next unless $e1->{iscov};
+                    next unless $e2->{iscov};
+                    
+                    foreach my $al (@alleles)
+                    {
+                        my $f1=$e1->{$al->{a}}/$e1->{eucov};
+                        my $f2=$e2->{$al->{a}}/$e2->{eucov};
+                        my $div=abs($f1-$f2);
+                        $al->{c}+=$div;
+                    }
+                }
+            }
+            @alleles=sort {$b->{c}<=>$a->{c}} @alleles;
+            $pwc=$alleles[0]->{a};
+            
+            for (my $i=0;$i<scalar(@$selected_population);$i++)
+            {
+                my $i1=$selected_population->[$i]-1;
+                
+                for (my $k=$i+1;$k<scalar(@$selected_population);$k++)
+                {
+                    my $k1 = $selected_population->[$k]-1;
+                    
+                    my $e1=$data->[$i1];
+                    my $e2=$data->[$k1];
+                    
+                    if($e1->{iscov} && $e2->{iscov})
+                    {
+                        my $f1=$e1->{$pwc} / $e1->{eucov};
+                        my $f2=$e2->{$pwc} / $e2->{eucov};
+                        my $div=abs($f1-$f2);
+                        
+                        
+                        # p1,p2,dif
+                        push @pwcomp,
+                        {
+                            p1=>$e1->{$pwc}."/".$e1->{eucov},
+                            p2=>$e2->{$pwc}."/".$e2->{eucov},
+                            dif=>$div,
+                        };
+                        
+                    }
+                    else
+                    {
+                        push @pwcomp,
+                        {
+                            dif=>"na",p1=>"-",p2=>"-"
+                        };
+                    }
+                }
+            }
+            
+            
+        }
+        else {
         for my $i(0..$samples-1)
         {
             for my $k($i+1..$samples-1)
@@ -236,9 +358,8 @@ exit;
         }
         
         @alleles=sort {$b->{c}<=>$a->{c}} @alleles;
-        my $pwc=$alleles[0]->{a};
+        $pwc=$alleles[0]->{a};
         
-        my @pwcomp=();
         for my $i(0..$samples-1)
         {
             for my $k($i+1..$samples-1)
@@ -270,32 +391,62 @@ exit;
                 }
             }
         }
-        
+    }
         return $pwc,\@pwcomp;
     }
     
     sub get_header
     {
         my $samples=shift;
+        my $selected_population=shift;
+        
+        
         # rc: chr, pos, rc, alleles, alstring, delsum, consstring, subconsstring, consfreq, subconsfreq
         # rc: chr, pos, rc, alleles, alstring, delsum, most_diverged_char, pwfreqdif
         my $header_rc="##chr\tpos\trc\tallele_count\tallele_states\tdeletion_sum\tsnp_type\tmajor_alleles(maa)\tminor_alleles(mia)";
-        
-        for my $i (1..$samples)
-        {
-            $header_rc.="\tmaa_$i";
-        }
-        for my $i (1..$samples)
-        {
-            $header_rc.="\tmia_$i";
-        }
-
         my $header_pw="##chr\tpos\trc\tallele_count\tallele_states\tdeletion_sum\tsnp_type\tmost_variable_allele";
-        for my $i(1..$samples)
-        {
-            for my $k($i+1..$samples)
+        
+        if (scalar(@$selected_population)>0) {
+            @$selected_population = sort { $a <=> $b } @$selected_population;
+            
+            for my $i (@$selected_population)
             {
-                $header_pw.="\tdiff:$i-$k";
+                $header_rc.="\tmaa_$i";
+            }
+            
+            for my $i (@$selected_population)
+            {
+                $header_rc.="\tmia_$i";
+            }
+            
+            for (my $i=0;$i<scalar(@$selected_population);$i++)
+            {
+                
+                for (my $k=$i+1;$k<scalar(@$selected_population);$k++)
+                {
+                    $header_pw.="\tdiff:$selected_population->[$i]-$selected_population->[$k]";
+                }
+            }
+            
+            
+        }
+        else {
+            for my $i (1..$samples)
+            {
+                $header_rc.="\tmaa_$i";
+            }
+            for my $i (1..$samples)
+            {
+                $header_rc.="\tmia_$i";
+            }
+    
+            
+            for my $i(1..$samples)
+            {
+                for my $k($i+1..$samples)
+                {
+                    $header_pw.="\tdiff:$i-$k";
+                }
             }
         }
         return ($header_rc,$header_pw);
@@ -319,7 +470,18 @@ exit;
         my $mincount=shift;
         my $mincov=shift;
         my $maxcov=shift;
-        my $sp=get_sumsnp_synparser($mincount,$mincov,$maxcov);
+        my $selected_population=shift;
+        
+        
+        my $sp;
+        if (scalar(@$selected_population)>0) {
+                $sp=get_sumsnp_synparser_selected_pop($mincount,$mincoverage,$maxcoverage,$selected_population);
+        }
+        else {
+                $sp=get_sumsnp_synparser($mincount,$mincoverage,$maxcoverage);
+        }
+
+        #my $sp=get_sumsnp_synparser($mincount,$mincov,$maxcov);
         
         return sub
         {
@@ -336,48 +498,117 @@ exit;
     {
         my $entry=shift;
         my $mincount=shift;
-        
-        my $rc=$entry->{refchar};
-        my $delcount=0;
-        my $isrcsnp=0;
-        my @alleles=({a=>"A",c=>0},{a=>"T",c=>0},{a=>"C",c=>0},{a=>"G",c=>0});
-        foreach my $s (@{$entry->{samples}})
-        {
 
-            my @cons=(); push @cons,{a=>"A",c=>$s->{A} };  push @cons,{a=>"T",c=>$s->{T} };  push @cons,{a=>"C",c=>$s->{C} };  push @cons,{a=>"G",c=>$s->{G}};
-            @cons=sort { $b->{c} <=> $a->{c} } @cons;
-            $s->{a_desc} = \@cons;
+        if($mincount=~/%$/) {
             
-            # perform the following operations only when the data have the correct coverage
-            if($s->{iscov})
-            {
-                 my $delcount+=$s->{del};
-                # refcharsnp
-                $isrcsnp=1 if $s->{a_desc}[0]{a} ne $rc;
+            my $mincount1=$mincount;
                 
-                # the alleles
-                foreach my $al (@alleles)
+            $mincount1=~s/%$//;
+            chomp($mincount1);
+                
+            my $rc=$entry->{refchar};
+            my $delcount=0;
+            my $isrcsnp=0;
+            my @alleles=({a=>"A",c=>0},{a=>"T",c=>0},{a=>"C",c=>0},{a=>"G",c=>0});
+            foreach my $s (@{$entry->{samples}})
+            {
+                my @cons=(); push @cons,{a=>"A",c=>$s->{A} };  push @cons,{a=>"T",c=>$s->{T} };  push @cons,{a=>"C",c=>$s->{C} };  push @cons,{a=>"G",c=>$s->{G}};
+                @cons=sort { $b->{c} <=> $a->{c} } @cons;
+                $s->{a_desc} = \@cons;
+                
+                # perform the following operations only when the data have the correct coverage
+                if($s->{iscov})
                 {
-                    $al->{c}+=$s->{$al->{a}};
+                     my $delcount+=$s->{del};
+                    # refcharsnp
+                    $isrcsnp=1 if $s->{a_desc}[0]{a} ne $rc;
+                    
+                    # the alleles
+                    foreach my $al (@alleles)
+                    {
+                        $al->{c}+=$s->{$al->{a}};
+                    }
+                }
+    
+            }
+            @alleles=sort {$b->{c}<=>$a->{c}} @alleles;
+            
+            my @valalles = ();
+            my $total_cov=0;
+            $total_cov = $alleles[0]->{c}+$alleles[1]->{c}+$alleles[2]->{c}+$alleles[3]->{c};
+           
+            if ($total_cov>0) {
+                foreach my $a1 (@alleles) {
+                    my $percent = ($a1->{c}/$total_cov)*100;
+                    if ($percent>=$mincount1) {
+                        push(@valalles,$a1);
+                    }
+                    
                 }
             }
 
+            my $validalleles=@valalles;
+            my $alstring=join("/",map {$_->{a}} @valalles);
+            
+            my $ispopsnp=$entry->{issnp};
+            $isrcsnp=0 if $rc eq "N";
+            my $issnp=($ispopsnp or $isrcsnp)? 1:0;
+            $entry->{delsum}=$delcount;
+            $entry->{alleles}=$validalleles;
+            $entry->{alstring}=$alstring;
+            $entry->{ispopsnp}=$ispopsnp;
+            $entry->{isrcsnp}=$isrcsnp;
+            $entry->{issnp}=$issnp;
+            return $entry;
+            
+            
         }
-        @alleles=sort {$b->{c}<=>$a->{c}} @alleles;
-        my @valalles=grep {$_->{c}>=$mincount} @alleles;
-        my $validalleles=@valalles;
-        my $alstring=join("/",map {$_->{a}} @valalles);
         
-        my $ispopsnp=$entry->{issnp};
-        $isrcsnp=0 if $rc eq "N";
-        my $issnp=($ispopsnp or $isrcsnp)? 1:0;
-        $entry->{delsum}=$delcount;
-        $entry->{alleles}=$validalleles;
-        $entry->{alstring}=$alstring;
-        $entry->{ispopsnp}=$ispopsnp;
-        $entry->{isrcsnp}=$isrcsnp;
-        $entry->{issnp}=$issnp;
-        return $entry;
+        
+        else {
+            
+            my $rc=$entry->{refchar};
+            my $delcount=0;
+            my $isrcsnp=0;
+            my @alleles=({a=>"A",c=>0},{a=>"T",c=>0},{a=>"C",c=>0},{a=>"G",c=>0});
+            foreach my $s (@{$entry->{samples}})
+            {
+                       
+                my @cons=(); push @cons,{a=>"A",c=>$s->{A} };  push @cons,{a=>"T",c=>$s->{T} };  push @cons,{a=>"C",c=>$s->{C} };  push @cons,{a=>"G",c=>$s->{G}};
+                @cons=sort { $b->{c} <=> $a->{c} } @cons;
+                $s->{a_desc} = \@cons;
+                
+                # perform the following operations only when the data have the correct coverage
+                if($s->{iscov})
+                {
+                     my $delcount+=$s->{del};
+                    # refcharsnp
+                    $isrcsnp=1 if $s->{a_desc}[0]{a} ne $rc;
+                    
+                    # the alleles
+                    foreach my $al (@alleles)
+                    {
+                        $al->{c}+=$s->{$al->{a}};
+                    }
+                }
+    
+            }
+            @alleles=sort {$b->{c}<=>$a->{c}} @alleles;
+            my @valalles=grep {$_->{c}>=$mincount} @alleles;
+            my $validalleles=@valalles;
+            my $alstring=join("/",map {$_->{a}} @valalles);
+            
+            my $ispopsnp=$entry->{issnp};
+            $isrcsnp=0 if $rc eq "N";
+            my $issnp=($ispopsnp or $isrcsnp)? 1:0;
+            $entry->{delsum}=$delcount;
+            $entry->{alleles}=$validalleles;
+            $entry->{alstring}=$alstring;
+            $entry->{ispopsnp}=$ispopsnp;
+            $entry->{isrcsnp}=$isrcsnp;
+            $entry->{issnp}=$issnp;
+            return $entry;
+        }
     }
     
 
@@ -562,7 +793,7 @@ SNP-frequency-diff.pl - Identify differences in allele frequencies between at le
 
 =head1 SYNOPSIS
 
- SNP-frequency-diff.pl --input populations.sync --output-prefix pop_diff --min-count 2 --min-coverage 4  --max-coverage 2%
+ SNP-frequency-diff.pl --input populations.sync --output-prefix pop_diff --min-count 2 --min-coverage 4  --max-coverage 2% --select-population 1,3,4,5
 
 =head1 OPTIONS
 
@@ -587,20 +818,33 @@ provide this option if only a certain subregion of a contig should be analysed; 
 
 =item B<--min-count>
 
-the minimum count of the minor allele. used for SNP identification. SNPs will be identified considering all populations simultanously. default=2
+the minimum count of the minor allele; used for SNP identification. SNPs will be identified considering all populations simultanously. default=2
+The minimum count may be provided as one of the following two ways:
+
+ '2' The minimum count of the minor allele should be at least 2 or higher by considering all populations OR selected populations given in parameter --population
+ '2%' The minimum minor allele frequency should be at least 2% or higher by considering all populations OR selected populations given in parameter --population
+If user uses the --select-population parameter then minimum allele count will be checked for selected population only. If not using --select-population the minimum allele count will be checked for all populations.
+Please note that when you are using min-count in percent then the run time will increase because for each locus program will calculate frequency of 4 alleles.
+
 
 =item B<--min-coverage>
 
-the minimum coverage; used for SNP identification, the coverage in ALL populations has to be higher or equal to this threshold, otherwise no SNP will be called. default=4
+the minimum coverage; used for SNP identification, the coverage in ALL selected populations has to be higher or equal to this threshold, otherwise no SNP will be called. default=4
 
 =item B<--max-coverage>
 
-The maximum coverage; All populations are required to have coverages lower or equal than the maximum coverage; Mandatory
+The maximum coverage; All selected populations are required to have coverages lower or equal than the maximum coverage; Mandatory
 The maximum coverage may be provided as one of the following:
 
  '500' a maximum coverage of 500 will be used for all populations
  '300,400,500' a maximum coverage of 300 will be used for the first population, a maximum coverage of 400 for the second population and so on
  '2%' the 2% highest coverages will be ignored, this value is independently estimated for every population
+
+=item B<--select-population>
+
+A comma seperated list of populations. Optional parameter.
+If user uses the --select-population parameter then only selected populations will be used for SNP calling and  frequency calculations. If not using --select-population parameter the minimum allele count will be checked for all populations and frequency will be calculated for all populations.
+(e.g.: --select-population 1,7,3,9);
 
 =item B<--test>
 
@@ -688,6 +932,8 @@ The SNP site is ignored if a deletion is found in any population
 Robert Kofler
 
 Christian Schloetterer
+
+Ram Vinay Pandey
 
 =cut
 

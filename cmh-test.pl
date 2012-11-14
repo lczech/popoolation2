@@ -22,6 +22,7 @@ use Test;
 my $input;
 my $output="";
 my $userpopulation;
+my $selectpopulation="";
 my $help=0;
 my $test=0;
 my $verbose=1;
@@ -37,10 +38,11 @@ my $removetemp=0;
 GetOptions(
     "input=s"	    =>\$input,
     "output=s"	    =>\$output,
-    "min-count=i"   =>\$mincount,
+    "min-count=s"   =>\$mincount,
     "min-coverage=i"=>\$mincoverage,
     "max-coverage=s"=>\$usermaxcoverage,
     "population=s"  =>\$userpopulation,
+    "select-population=s"  =>\$selectpopulation,
     "min-pvalue=f"  =>\$minpvalue,
     "remove-temp"   =>\$removetemp,
     "test"          =>\$test,
@@ -51,10 +53,9 @@ pod2usage(-verbose=>2) if $help;
 CMHTest::runTests() && exit if $test;
 pod2usage(-msg=>"A input file has to be provided\n",-verbose=>1) unless -e $input;
 pod2usage(-msg=>"A output file has to be provided\n",-verbose=>1) unless $output;
-pod2usage(-msg=>"Minimum coverage must be equal or larger than minimum count",-verbose=>1) unless $mincoverage>= $mincount;
+#pod2usage(-msg=>"Minimum coverage must be equal or larger than minimum count",-verbose=>1) unless $mincoverage>= $mincount;
 pod2usage(-msg=>"Maximum coverage has to be provided",-verbose=>1) unless $usermaxcoverage;
 pod2usage(-msg=>"The pairwise comparisions have to be provided (--population)",-verbose=>1) unless $userpopulation;
-
 
 
 ################# write param file
@@ -67,15 +68,38 @@ print $pfh "Using min-count\t$mincount\n";
 print $pfh "Using min-coverage\t$mincoverage\n";
 print $pfh "Using max-coverage\t$usermaxcoverage\n";
 print $pfh "Using population\t$userpopulation\n";
+
+if ($selectpopulation) {
+	print $pfh "Using select-population\t$selectpopulation\n";
+}
 print $pfh "Using min-pvalue\t$minpvalue\n";
 print $pfh "Remove temporary files\t$removetemp\n";
 print $pfh "Using test\t$test\n";
 print $pfh "Using help\t$help\n";
 close $pfh;
 
+my $selected_population = [];
+if ($selectpopulation) {
+	$selected_population = resolve_selected_populations($input,$selectpopulation);
+}
+
+
 my $maxcoverage=get_max_coverage($input,$usermaxcoverage);
 my $populations=CMHUtil::resolve_population($userpopulation);
-my $syncparser=get_sumsnp_synparser($mincount,$mincoverage,$maxcoverage);
+CMHUtil::resolve_selected_user_population($populations,$selected_population);
+
+my $syncparser;
+if ($selectpopulation) {
+	$syncparser=get_sumsnp_synparser_selected_pop($mincount,$mincoverage,$maxcoverage,$selected_population);
+}
+else {
+	$syncparser=get_sumsnp_synparser($mincount,$mincoverage,$maxcoverage);
+}
+
+#my $syncparser=get_sumsnp_synparser($mincount,$mincoverage,$maxcoverage);
+
+
+
 
 my $rinput=$output.".rin";
 my $routput=$output.".rout";
@@ -161,6 +185,32 @@ exit(0);
 		
 		die "Pairwise comparisions must be an even number (user provided $userpopulation)" if(scalar(@$populations) % 2);
 		return $populations;
+	}
+	
+	sub resolve_selected_user_population
+	{
+		my $user_populations=shift;
+		my $selected_populations=shift;
+		
+		if (scalar(@$selected_populations)>0) {
+		
+			die "--select-population parameter should have exactly same populations as given in --population parameter (user provided --select-population $selectpopulation)" if(scalar(@$selected_populations) % 2);
+			
+			
+			for my $pop (@$user_populations) {
+				my $popct=0;
+				for my $pop1 (@$selected_populations) {
+					if ($pop==$pop1) {
+						$popct++;
+					}
+				}
+				
+				die "--select-population parameter and --population parameter does not have same populations (user provided --population $userpopulation and --select-population $selectpopulation)" if($popct < 1 || $popct>1);
+				$popct=0;
+			}
+		
+		}
+
 	}
 	
 	sub write_Rinput
@@ -277,7 +327,7 @@ cmh-test.pl - This script calculates the Cochran-Mantel-Haenszel test for each S
 
 =head1 SYNOPSIS
 
- perl cmh-test.pl --input input.sync --output output.cmh --min-count 2 --min-coverage 4 --max-coverage 1000 --population 1-2,3-4,5-6 --remove-temp
+ perl cmh-test.pl --input input.sync --output output.cmh --min-count 2 --min-coverage 4 --max-coverage 1000 --population 1-2,3-4,5-6 --remove-temp --select-population 1,2,3,4,5,6
 
 =head1 OPTIONS
 
@@ -294,14 +344,20 @@ The output file. Mandatory parameter
 =item B<--min-count>
 
 the minimum count of the minor allele; used for SNP identification. SNPs will be identified considering all populations simultanously. default=2
+The minimum count may be provided as one of the following two ways:
+
+ '2' The minimum count of the minor allele should be at least 2 or higher by considering all populations OR selected populations given in parameter --population
+ '2%' The minimum minor allele frequency should be at least 2% or higher by considering all populations OR selected populations given in parameter --population
+If user uses the --select-population parameter then minimum allele count will be checked for selected populations only. If not using --select-population the minimum allele count will be checked for all populations.
+Please note that when you are using min-count in percent then the run time will increase because for each locus program will calculate frequency of 4 alleles.
 
 =item B<--min-coverage>
 
-the minimum coverage; used for SNP identification, the coverage in ALL populations has to be higher or equal to this threshold, otherwise no SNP will be called. default=4
+the minimum coverage; used for SNP identification, the coverage in ALL selected populations has to be higher or equal to this threshold, otherwise no SNP will be called. default=4
 
 =item B<--max-coverage>
 
-The maximum coverage; All populations are required to have coverages lower or equal than the maximum coverage; Mandatory
+The maximum coverage; All selected populations are required to have coverages lower or equal than the maximum coverage; Mandatory
 The maximum coverage may be provided as one of the following:
 
  '500' a maximum coverage of 500 will be used for all populations
@@ -316,7 +372,14 @@ the minimum p-value cut off  to filter all snp with > min-pvalue cutoff [Optiona
 
 the pairwise comparsions which will be used for the cmh-test.
 Pairwise comparisions have to be separated by a C<,> and the two populations which will be compared by a C<->. For example when the user provides 1-3,2-4 the script will compare population 1 with population 3 and population 2 with population 4;
-Note also comparisions involving one population for several times are possible (e.g.: 1-2,1-3); Mandatory parameter
+Note also comparisions involving one population for several times are possible (e.g.: --population 1-7,3-9); Mandatory parameter
+
+=item B<--select-population>
+
+A comma seperated list of populations. Optional parameter. This parameter should have same populations as in --population parameter.
+If user user --select-population parameter then only selected populations will be used for the minimum allele count check and p-value calculations. . If not using --select-population parameter the minimum allele count will be checked for all populations and p-value will be calculated for the population pair given with --population parameter.
+(e.g.: --select-population 1,7,3,9);
+
 
 =item B<--remove-temp>
 
@@ -373,7 +436,7 @@ Every pileup file represents a population and will be parsed into a list of A-co
  col 5: population 2
  col n: population n-3
  col n+1: cmh p-value
-
+ Note: If user gives --population  1-13,2-6,3-7 and --select-population 1,13,2,6,3,7 then SNP calling and p-value will be calculated only for selected populations but still all population will be printed in output file just to keep all sync file information.
 
 =head1 Technical details
 
