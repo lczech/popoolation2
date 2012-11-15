@@ -22,7 +22,7 @@ GetOptions(
     "input=s"           =>\$input,
     "indel-window=i"    =>\$indelwindow,
     "output=s"          =>\$output,
-    "min-count=i"       =>\$mincount,
+    "min-count=s"       =>\$mincount,
     "test"              =>\$test,
     "help"              =>\$help
 ) or die "Invalid arguments";
@@ -69,6 +69,7 @@ while(my $line=<$ifh>)
     my $rc=shift @ar;
     
     my $nucs="";
+    my $total_cov=0;
     while(@ar)
     {
         my $cov=shift @ar;
@@ -76,13 +77,14 @@ while(my $line=<$ifh>)
         my $q=shift @ar;
         die "mpileup fucked" unless(defined($q));
         $nucs.=$n;
+        $total_cov+=$cov;
     }
     #
     
     
     next unless $nucs=~m/[-+]\d/;
     $count_indelpos++;
-    my ($valid,$indelleng)=Utility::parse_pileup($nucs,$mincount);
+    my ($valid,$indelleng)=Utility::parse_pileup($nucs,$total_cov,$mincount);
     next unless $valid;
     
     push @$indelposar,{
@@ -117,9 +119,19 @@ exit;
     sub parse_pileup
     {
         my $nucs=shift;
+        my $total_cov=shift;
         my $mincount=shift;
-
         
+        my $mincount1=0;
+        if($mincount=~/%$/) {
+        	$mincount1=$mincount;
+                
+                $mincount1=~s/%$//;
+                chomp($mincount1);
+        }
+        else {
+            $mincount1=$mincount;
+        }
         my $tempindels=[];
         # deletions have a length in the reference: the numbe after the '-'
         my(@dels)=$nucs=~m/[-](\d+)(??{"[ACGTNacgtn]{$1}"})/g;
@@ -146,12 +158,31 @@ exit;
         
         my $maxleng=0;
         my $valid=0;
-        while(my($leng,$count)=each(%$tlh))
-        {
-            if($count>=$mincount)
+        
+        if($mincount=~/%$/) {
+            while(my($leng,$count)=each(%$tlh))
             {
-                $valid=1;
-                $maxleng=$leng if $leng> $maxleng;
+                my $indel_percent=0;
+                if ($total_cov>0) {
+                    $indel_percent = ($count/$total_cov)*100;
+                }
+                if($indel_percent>=$mincount1)
+                {
+                    $valid=1;
+                    $maxleng=$leng if $leng> $maxleng;
+                }
+            }
+            
+        }
+        else {
+            while(my($leng,$count)=each(%$tlh))
+            {
+                
+                if($count>=$mincount1)
+                {
+                    $valid=1;
+                    $maxleng=$leng if $leng> $maxleng;
+                }
             }
         }
         
@@ -392,6 +423,11 @@ Length of the window around the indel; default=5
 =item B<--min-count>
 
 Minimum count for an indel; default=1
+The minimum count for an indel; default=1
+The minimum count may be provided as one of the following two ways:
+
+ '2' The minimum count of an indel should be atleast 2 or higher across all populations.
+ '2%' The minimum indel frequency should be atleast 2% or higher across all populations. The indel percent is calculated as (indel-count across populations/sum of all populations coverage)*100
 
 =item B<--test>
 
