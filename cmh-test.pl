@@ -159,6 +159,8 @@ exit(0);
 			$line=~s/"$//;
 			$line=~s/\\t/\t/g;
 			$pvalue=~s/^\S+\s//;
+			$pvalue="1.0" if $pvalue eq "NaN"; 	# stupid mantelhaenszeltest prodcues NaN for example mantelhaen.test(array(c(100,100,0,0,100,100,0,0,100,100,0,0),dim=c(2,2,3)),alternative=c("two.sided"))
+								# this is clearly no differentiation thus 1.0 (necessary as it fucks up sorting by significance)
 			next if $pvalue> $minpvalue;
 			print $ofh $line."\t".$pvalue."\n";
 		}
@@ -442,6 +444,8 @@ Every pileup file represents a population and will be parsed into a list of A-co
 
 This script identifies the two major alleles for every SNPs and than runs the run Cochran mental haenszel test.
 The script creates two temporary output files for R, having the extensions C<.rin> and C<.rout> which may be automatically removed using the option C<--remove-temp>.
+Also note that the CMH test sometimes produces the pvalue 'NaN' (eg: mantelhaen.test(array(c(100,100,0,0,100,100,0,0,100,100,0,0),dim=c(2,2,3)),alternative=c("two.sided")))
+This NaN will be replaced by 1.0
 
 
 =head2 Test statistic
