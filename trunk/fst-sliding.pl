@@ -293,11 +293,11 @@ the minimum fraction of a window being between min-coverage and max-coverage in 
 
 =item B<--window-size>
 
-the size of the sliding window. Measured in C<--window-unit>; default=1000
+the size of the sliding window; default=1000
 
 =item B<--step-size>
 
-the size of the sliding window steps. Measured in C<--window-unit>; default=1000
+the size of the sliding window steps; default=1000
 
 =item B<--pool-size>
 
@@ -383,7 +383,8 @@ By default Fst is calculated from the allele-frequencies (not from the allele-co
  
  Fst = (Pi_total - Pi_within) / Pi_total
  Pi_within = (Pi_population1 + Pi_population2)/ 2
- Pi: 1 - fA ^ 2 - fT ^ 2 -fC ^ 2 - fG ^ 2
+ Pi: (C/(C-1))*(1 - fA ^ 2 - fT ^ 2 -fC ^ 2 - fG ^ 2)
+ C: coverage
  fN:  frequency of nucleotide N
  Pi_total: for the total Pi the allele frequencies of the two
      populations are averaged and Pi is calculated as shown above
