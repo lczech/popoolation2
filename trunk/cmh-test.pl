@@ -30,7 +30,7 @@ my $verbose=1;
 my $mincount=2;
 my $mincoverage=4;
 my $usermaxcoverage;
-my $minpvalue=1.0;
+my $minlogpvalue=0.0;
 my $removetemp=0;
 
 # --input /Users/robertkofler/pub/PoPoolation2/Walkthrough/demo-data/cmh/small-test.sync --output /Users/robertkofler/pub/PoPoolation2/Walkthrough/demo-data/cmh/small-test.cmh --population 1,2,3,4 --min-count 2 --min-coverage 4 --max-coverage 200
@@ -43,7 +43,7 @@ GetOptions(
     "max-coverage=s"=>\$usermaxcoverage,
     "population=s"  =>\$userpopulation,
     "select-population=s"  =>\$selectpopulation,
-    "min-pvalue=f"  =>\$minpvalue,
+    "min-logpvalue=f"  =>\$minlogpvalue,
     "remove-temp"   =>\$removetemp,
     "test"          =>\$test,
     "help"	    =>\$help
@@ -72,7 +72,7 @@ print $pfh "Using population\t$userpopulation\n";
 if ($selectpopulation) {
 	print $pfh "Using select-population\t$selectpopulation\n";
 }
-print $pfh "Using min-pvalue\t$minpvalue\n";
+print $pfh "Using min-logpvalue\t$minlogpvalue\n";
 print $pfh "Remove temporary files\t$removetemp\n";
 print $pfh "Using test\t$test\n";
 print $pfh "Using help\t$help\n";
@@ -98,9 +98,6 @@ else {
 
 #my $syncparser=get_sumsnp_synparser($mincount,$mincoverage,$maxcoverage);
 
-
-
-
 my $rinput=$output.".rin";
 my $routput=$output.".rout";
 
@@ -111,7 +108,7 @@ print "Calling R, to calculate the Cochran-Mantel-Haenszel test statistic\n";
 system("R --vanilla --slave <$rinput >$routput");
 
 print "Parsing R-output and writing output file\n";
-CMHUtil::write_output($routput,$output,$minpvalue);
+CMHUtil::write_output($routput,$output,$minlogpvalue);
 
 if($removetemp)
 {
@@ -141,7 +138,7 @@ exit(0);
 	{
 		my $routput=shift;
 		my $output=shift;
-		my $minpvalue=shift;
+		my $minlogpvalue=shift;
 		
 		open my $ifh,"<", $routput or die "Could not open input file\n";
 		open my $ofh,">",$output or die "Could not open output file\n";
@@ -159,9 +156,9 @@ exit(0);
 			$line=~s/"$//;
 			$line=~s/\\t/\t/g;
 			$pvalue=~s/^\S+\s//;
-			$pvalue="1.0" if $pvalue eq "NaN"; 	# stupid mantelhaenszeltest prodcues NaN for example mantelhaen.test(array(c(100,100,0,0,100,100,0,0,100,100,0,0),dim=c(2,2,3)),alternative=c("two.sided"))
+			#$pvalue="1.0" if $pvalue eq "NaN"; 	# stupid mantelhaenszeltest prodcues NaN for example mantelhaen.test(array(c(100,100,0,0,100,100,0,0,100,100,0,0),dim=c(2,2,3)),alternative=c("two.sided"))
 								# this is clearly no differentiation thus 1.0 (necessary as it fucks up sorting by significance)
-			next if $pvalue> $minpvalue;
+			next if $pvalue <  $minlogpvalue;
 			print $ofh $line."\t".$pvalue."\n";
 		}
 		close $ofh;
@@ -215,6 +212,233 @@ exit(0);
 
 	}
 	
+	sub write_mantelro
+	{
+		my $fh=shift;
+print $fh <<PERLSUCKS;
+mantelro<-function (x, y = NULL, z = NULL, alternative = c("two.sided", 
+                                                 "less", "greater"), correct = TRUE, exact = FALSE, conf.level = 0.95) 
+{
+  DNAME <- deparse(substitute(x))
+  if (is.array(x)) {
+    if (length(dim(x)) == 3L) {
+      if (any(is.na(x))) 
+        stop("NAs are not allowed")
+      if (any(dim(x) < 2L)) 
+        stop("each dimension in table must be >= 2")
+    }
+    else stop("'x' must be a 3-dimensional array")
+  }
+  else {
+    if (is.null(y)) 
+      stop("if 'x' is not an array, 'y' must be given")
+    if (is.null(z)) 
+      stop("if 'x' is not an array, 'z' must be given")
+    if (any(diff(c(length(x), length(y), length(z))) != 0L)) 
+      stop("'x', 'y', and 'z' must have the same length")
+    DNAME <- paste(DNAME, "and", deparse(substitute(y)), 
+                   "and", deparse(substitute(z)))
+    OK <- complete.cases(x, y, z)
+    x <- factor(x[OK])
+    y <- factor(y[OK])
+    if ((nlevels(x) < 2L) || (nlevels(y) < 2L)) 
+      stop("'x' and 'y' must have at least 2 levels")
+    else x <- table(x, y, z[OK])
+  }
+  if (any(apply(x, 3L, sum) < 2)) 
+    stop("sample size in each stratum must be > 1")
+  I <- dim(x)[1L]
+  J <- dim(x)[2L]
+  K <- dim(x)[3L]
+  if ((I == 2) && (J == 2)) {
+    alternative <- match.arg(alternative)
+    if (!missing(conf.level) && (length(conf.level) != 1 || 
+                                   !is.finite(conf.level) || conf.level < 0 || conf.level > 
+                                   1)) 
+      stop("'conf.level' must be a single number between 0 and 1")
+    NVAL <- c(`common odds ratio` = 1)
+    if (!exact) {
+      s.x <- apply(x, c(1L, 3L), sum)
+      s.y <- apply(x, c(2L, 3L), sum)
+      n <- as.double(apply(x, 3L, sum))
+      DELTA <- sum(x[1, 1, ] - s.x[1, ] * s.y[1, ]/n)
+      YATES <- if (correct && (abs(DELTA) >= 0.5)) 
+        0.5
+      else 0
+      STATISTIC <- ((abs(DELTA) - YATES)^2/sum(apply(rbind(s.x, 
+                                                           s.y), 2L, prod)/(n^2 * (n - 1))))
+      PARAMETER <- 1
+      if (alternative == "two.sided") 
+        PVAL <- -pchisq(STATISTIC, PARAMETER, lower.tail = FALSE,log.p=TRUE)*log10(exp(1))
+      else {
+        z <- sign(DELTA) * sqrt(STATISTIC)
+        PVAL <- -pnorm(z, log.p=TRUE,lower.tail = (alternative == 
+                                         "less"))*log10(exp(1))
+      }
+      names(STATISTIC) <- "Mantel-Haenszel X-squared"
+      names(PARAMETER) <- "df"
+      METHOD <- paste("Mantel-Haenszel chi-squared test", 
+                      if (YATES) 
+                        "with"
+                      else "without", "continuity correction")
+      s.diag <- sum(x[1L, 1L, ] * x[2L, 2L, ]/n)
+      s.offd <- sum(x[1L, 2L, ] * x[2L, 1L, ]/n)
+      ESTIMATE <- s.diag/s.offd
+      sd <- sqrt(sum((x[1L, 1L, ] + x[2L, 2L, ]) * x[1L, 
+                                                     1L, ] * x[2L, 2L, ]/n^2)/(2 * s.diag^2) + sum(((x[1L, 
+                                                                                                       1L, ] + x[2L, 2L, ]) * x[1L, 2L, ] * x[2L, 1L, 
+                                                                                                                                              ] + (x[1L, 2L, ] + x[2L, 1L, ]) * x[1L, 1L, ] * 
+                                                                                                      x[2L, 2L, ])/n^2)/(2 * s.diag * s.offd) + sum((x[1L, 
+                                                                                                                                                       2L, ] + x[2L, 1L, ]) * x[1L, 2L, ] * x[2L, 1L, 
+                                                                                                                                                                                              ]/n^2)/(2 * s.offd^2))
+      CINT <- switch(alternative, less = c(0, ESTIMATE * 
+                                             exp(qnorm(conf.level) * sd)), greater = c(ESTIMATE * 
+                                                                                         exp(qnorm(conf.level, lower.tail = FALSE) * sd), 
+                                                                                       Inf), two.sided = {
+                                                                                         ESTIMATE * exp(c(1, -1) * qnorm((1 - conf.level)/2) * 
+                                                                                                          sd)
+                                                                                       })
+      RVAL <- list(statistic = STATISTIC, parameter = PARAMETER, 
+                   p.valuelog = PVAL)
+    }
+    else {
+      METHOD <- paste("Exact conditional test of independence", 
+                      "in 2 x 2 x k tables")
+      mn <- apply(x, c(2L, 3L), sum)
+      m <- mn[1L, ]
+      n <- mn[2L, ]
+      t <- apply(x, c(1L, 3L), sum)[1L, ]
+      s <- sum(x[1L, 1L, ])
+      lo <- sum(pmax(0, t - n))
+      hi <- sum(pmin(m, t))
+      support <- lo:hi
+      dc <- .C(C_d2x2xk, as.integer(K), as.double(m), as.double(n), 
+               as.double(t), d = double(hi - lo + 1))\$d
+      logdc <- log(dc)
+      dn2x2xk <- function(ncp) {
+        if (ncp == 1) 
+          return(dc)
+        d <- logdc + log(ncp) * support
+        d <- exp(d - max(d))
+        d/sum(d)
+      }
+      mn2x2xk <- function(ncp) {
+        if (ncp == 0) 
+          return(lo)
+        if (ncp == Inf) 
+          return(hi)
+        sum(support * dn2x2xk(ncp))
+      }
+      pn2x2xk <- function(q, ncp = 1, upper.tail = FALSE) {
+        if (ncp == 0) {
+          if (upper.tail) 
+            return(as.numeric(q <= lo))
+          else return(as.numeric(q >= lo))
+        }
+        if (ncp == Inf) {
+          if (upper.tail) 
+            return(as.numeric(q <= hi))
+          else return(as.numeric(q >= hi))
+        }
+        d <- dn2x2xk(ncp)
+        if (upper.tail) 
+          sum(d[support >= q])
+        else sum(d[support <= q])
+      }
+      PVAL <- switch(alternative, less = pn2x2xk(s, 1), 
+                     greater = pn2x2xk(s, 1, upper.tail = TRUE), two.sided = {
+                       relErr <- 1 + 10^(-7)
+                       d <- dc
+                       sum(d[d <= d[s - lo + 1] * relErr])
+                     })
+      mle <- function(x) {
+        if (x == lo) 
+          return(0)
+        if (x == hi) 
+          return(Inf)
+        mu <- mn2x2xk(1)
+        if (mu > x) 
+          uniroot(function(t) mn2x2xk(t) - x, c(0, 1))\$root
+        else if (mu < x) 
+          1/uniroot(function(t) mn2x2xk(1/t) - x, c(.Machine\$double.eps, 
+                                                    1))\$root
+        else 1
+      }
+      ESTIMATE <- mle(s)
+      ncp.U <- function(x, alpha) {
+        if (x == hi) 
+          return(Inf)
+        p <- pn2x2xk(x, 1)
+        if (p < alpha) 
+          uniroot(function(t) pn2x2xk(x, t) - alpha, 
+                  c(0, 1))\$root
+        else if (p > alpha) 
+        {
+          1/uniroot(function(t) pn2x2xk(x, 1/t) - alpha, 
+                    c(.Machine\$double.eps, 1))\$root
+        }
+        else 1
+      }
+      ncp.L <- function(x, alpha) {
+        if (x == lo) 
+          return(0)
+        p <- pn2x2xk(x, 1, upper.tail = TRUE)
+        if (p > alpha) 
+          uniroot(function(t) pn2x2xk(x, t, upper.tail = TRUE) - 
+                    alpha, c(0, 1))\$root
+        else if (p < alpha) 
+          1/uniroot(function(t) pn2x2xk(x, 1/t, upper.tail = TRUE) - 
+                      alpha, c(.Machine\$double.eps, 1))\$root
+        else 1
+      }
+      CINT <- switch(alternative, less = c(0, ncp.U(s, 
+                                                    1 - conf.level)), greater = c(ncp.L(s, 1 - conf.level), 
+                                                                                  Inf), two.sided = {
+                                                                                    alpha <- (1 - conf.level)/2
+                                                                                    c(ncp.L(s, alpha), ncp.U(s, alpha))
+                                                                                  })
+      STATISTIC <- c(S = s)
+      RVAL <- list(statistic = STATISTIC, p.value = PVAL)
+    }
+    names(ESTIMATE) <- names(NVAL)
+    attr(CINT, "conf.level") <- conf.level
+    RVAL <- c(RVAL, list(conf.int = CINT, estimate = ESTIMATE, 
+                         null.value = NVAL, alternative = alternative))
+  }
+  else {
+    df <- (I - 1) * (J - 1)
+    n <- m <- double(length = df)
+    V <- matrix(0, nrow = df, ncol = df)
+    for (k in 1:K) {
+      f <- x[, , k]
+      ntot <- sum(f)
+      rowsums <- apply(f, 1L, sum)[-I]
+      colsums <- apply(f, 2L, sum)[-J]
+      n <- n + c(f[-I, -J])
+      m <- m + c(outer(rowsums, colsums, "*"))/ntot
+      V <- V + (kronecker(diag(ntot * colsums, nrow = J - 
+                                 1) - outer(colsums, colsums), diag(ntot * rowsums, 
+                                                                    nrow = I - 1) - outer(rowsums, rowsums))/(ntot^2 * 
+                                                                                                                (ntot - 1)))
+    }
+    n <- n - m
+    STATISTIC <- c(crossprod(n, qr.solve(V, n)))
+    PARAMETER <- df
+    PVAL <- -pchisq(STATISTIC, PARAMETER, lower.tail = FALSE,log.p=TRUE)*log10(exp(1))
+    names(STATISTIC) <- "Cochran-Mantel-Haenszel M^2"
+    names(PARAMETER) <- "df"
+    METHOD <- "Cochran-Mantel-Haenszel test"
+    RVAL <- list(statistic = STATISTIC, parameter = PARAMETER, 
+                 p.valuelog = PVAL)
+  }
+  RVAL <- c(RVAL, list(method = METHOD, data.name = DNAME))
+  class(RVAL) <- "htest"
+  return(RVAL)
+}
+PERLSUCKS
+
+	}
+	
 	sub write_Rinput
 	{
 		my $syncfile=shift;
@@ -227,6 +451,7 @@ exit(0);
 		
 		open my $ifh, "<", $syncfile or die "Could not open input file";
 		open my $ofh, ">", $rinput or die "Could not open routput file";
+		write_mantelro($ofh);
 		while(my $line=<$ifh>)
 		{
 			chomp $line;
@@ -235,7 +460,7 @@ exit(0);
 			
 			my $pop_str=_get_populationstring($e->{samples},$populations);
 			my $ar_str="array($pop_str,dim=$dim_str)";
-			my $mantel_str="mantelhaen.test($ar_str,alternative=c(\"two.sided\"))\$p.value";
+			my $mantel_str="mantelro($ar_str,alternative=c(\"two.sided\"))\$p.valuelog";
 			print $ofh "print(\"$line\")\n";
 			print $ofh $mantel_str."\n";
 		}
@@ -366,9 +591,10 @@ The maximum coverage may be provided as one of the following:
  '300,400,500' a maximum coverage of 300 will be used for the first population, a maximum coverage of 400 for the second population and so on
  '2%' the 2% highest coverages will be ignored, this value is independently estimated for every population
   
-=item B<--min-pvalue>
+=item B<--min-logpvalue>
 
-the minimum p-value cut off  to filter all snp with > min-pvalue cutoff [Optional parameter]
+the minimum -log10(p-value) cut off  to filter all snp with > min-pvalue cutoff; default=0.0 [Optional parameter]
+For example if the user provides 5 than all pvalues > 0.00001 will be discarded;  
 
 =item B<--population>
 
@@ -437,7 +663,7 @@ Every pileup file represents a population and will be parsed into a list of A-co
  col 4: population 1
  col 5: population 2
  col n: population n-3
- col n+1: cmh p-value
+ col n+1: cmh -log10(p-value)
  Note: If user gives --population  1-13,2-6,3-7 and --select-population 1,13,2,6,3,7 then SNP calling and p-value will be calculated only for selected populations but still all population will be printed in output file just to keep all sync file information.
 
 =head1 Technical details
