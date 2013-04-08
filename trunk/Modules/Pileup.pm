@@ -112,7 +112,8 @@ sub _get_subnucsqualparser
             my $qc=$qual[$i];
             my $nc=$nucs[$i];
             
-            my $quality = $encoder->($qc); 
+            my $quality = $encoder->($qc);
+            die "quality lower than zero: $nucs, $qual\n" if($quality<0); 
             next if $quality <$minqual;
             $co++;
             
