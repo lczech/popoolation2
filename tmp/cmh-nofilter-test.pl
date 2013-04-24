@@ -478,6 +478,12 @@ PERLSUCKS
 			my $base=$samples->[$basenr];
 			my $derived=$samples->[$derivednr];
 			
+			# set default to 1; otherwise cmh-test crashes..
+			$base->{$major}=1 if $base->{$major}==0;
+			$base->{$minor}=1 if $base->{$minor}==0;
+			$derived->{$major}=1 if $derived->{$major}==0;
+			$derived->{$minor}=1 if $derived->{$minor}==0;
+			
 			push @ar,$base->{$major};
 			push @ar,$derived->{$major};
 			push @ar,$base->{$minor};
