@@ -55,7 +55,7 @@ print $pfh "Using help\t$help\n";
 close $pfh;
 
 my $maxcoverage=get_max_coverage($input,$usermaxcoverage);
-my $pp=get_sumsnp_synparser(10000000,$targetcoverage,$maxcoverage);
+my $pp=get_sumsnp_synparser(10000000,$targetcoverage,$maxcoverage); # the 10^6 is necessary for the tainted option (indel)
 my $subsampler=get_subsampler($method,$targetcoverage);
 
 open my $ifh, "<",$input or die "Could not open input file $input";
