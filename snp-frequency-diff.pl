@@ -104,7 +104,7 @@ while(my $line = <$ifh>)
     if($region)
     {
         my ($chr,$pos)=split /\s+/,$line;
-        next unless $chr==$region->{chr};
+        next unless $chr eq $region->{chr};
         next if($pos<$region->{start} or $pos>$region->{end});
     }
     
