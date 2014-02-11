@@ -156,7 +156,7 @@
         my $avmincov=0;
         foreach(@$curwin)
         {
-            print "ispuresnp: $_->{ispuresnp}\n";
+           # print "ispuresnp: $_->{ispuresnp}\n";
             $snps++ if $_->{ispuresnp};
             if($_->{iscov})
             {
