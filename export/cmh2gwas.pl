@@ -8,11 +8,13 @@ my $input;
 my $output;
 my $help=0;
 
+my $minpvalue=1.0e-20;
 
 
 GetOptions(
     "input=s"	    =>\$input,
     "output=s"	    =>\$output,
+    "min-pvalue=s"  =>\$minpvalue,
     "help"	    =>\$help
 ) or pod2usage(-msg=>"Wrong options",-verbose=>1);
 
@@ -34,6 +36,8 @@ while(my $line=<$ifh>)
     my $chr=shift @ar;
     my $pos=shift @ar;
     my $pvalue=pop @ar;
+    $pvalue = 10**(-$pvalue);
+    $pvalue=$minpvalue if $pvalue< $minpvalue;
     print $ofh "$chr\t$pos\tsnp$counter\t$pvalue\n";
     $counter++;
 }
@@ -69,6 +73,10 @@ The input file has to be the output file of the cmh-test. Mandatory parameter
 =item B<--output>
 
 The output file. Mandatory parameter
+
+=item B<--min-pvalue>
+
+IGV has some problems displaying very low p-values; Using this option all p-values being smaller than C<--min-pvalue> will be set to C<--min-pvalue>; default=1.0e-20 
 
 =item B<--help>
 
