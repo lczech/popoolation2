@@ -88,7 +88,7 @@ sub _get_subnucsqualparser
     
         
         # get rid of the crap present in the sequence line
-        $nucs=~s/[-+](\d+)(??{"[ACGTNacgtn]{$1}"})//g; # I offer a beer for anyone who understand this line, I am a genius!!!!
+        $nucs=~s/[-+](\d+)(??{"[ACGTNKMRYSWBVHDXacgtnkmryswbvhdx]{$1}"})//g; # I offer a beer for anyone who understand this line, I am a genius!!!!
         $nucs=~s/\^.//g;
         $nucs=~s/\$//g;
         $nucs=~s/[.]/uc($rc)/eg;
