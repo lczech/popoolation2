@@ -134,7 +134,7 @@ exit;
         }
         my $tempindels=[];
         # deletions have a length in the reference: the numbe after the '-'
-        my(@dels)=$nucs=~m/[-](\d+)(??{"[ACGTNacgtn]{$1}"})/g;
+        my(@dels)=$nucs=~m/[-](\d+)(??{"[ACGTNKMRYSWBVHDXacgtnkmryswbvhdx]{$1}"})/g;
         # gi|9626372|ref|NC_001422.1|     329     T       95      .$..$.$................................-1A...-1A......................................................
         # gi|9626372|ref|NC_001422.1|     330     A       94      .$...............................*..*........................................................^F.^F.
         
@@ -144,7 +144,7 @@ exit;
         }
         
         # insertions have no length in the reference: length zero (they only have a length in the read)
-        my(@ins)=$nucs=~m/[+](\d+)(??{"[ACGTNacgtn]{$1}"})/g;
+        my(@ins)=$nucs=~m/[+](\d+)(??{"[ACGTNKMRYSWBVHDXacgtnkmryswbvhdx]{$1}"})/g;
         foreach my $i (@ins)
         {
             push @$tempindels,0;
