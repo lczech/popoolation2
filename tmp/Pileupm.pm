@@ -1,5 +1,5 @@
 {
-    package Pileup;
+    package Pileupm;
     use strict;
     use warnings;
     use FindBin qw/$Bin/;
