@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use FindBin qw/$Bin/;
 use lib "$Bin";
+use IO::Uncompress::Gunzip;
 use Synchronized;
 use SynchronizeUtility;
 
@@ -58,7 +59,13 @@ sub get_max_coverage
         
         
         print "Computing maximum coverage cutoffs from the empirical distributions of coverages\n";
-        open my $ifh,"<", $syncfile or die "Could not open input file";
+        my $ifh = undef;
+	if($syncfile=~/\.gz$/i) {
+			 $ifh = new IO::Uncompress::Gunzip $syncfile or die "Could not open file gzipped file $syncfile  $!";
+	}
+	else {
+			open $ifh, "<", $syncfile  or die "Could not open file handle, $!";
+	}
         
         
         my $counter=[];
