@@ -6,6 +6,7 @@
     use lib "$Bin";
     use Synchronized;
     use Test;
+    use IO::Uncompress::Gunzip;
     
     require Exporter;
     our @ISA = qw(Exporter);
@@ -51,7 +52,15 @@
     sub get_popcount_forsyncfile
     {
         my $syncfile=shift;
-        open my $ifh, "<", $syncfile or die "Could not open syncfile";
+	
+	my $ifh = undef;
+	if($syncfile=~/\.gz$/i) {
+		$ifh = new IO::Uncompress::Gunzip $syncfile or die "Could not open file gzipped file $syncfile  $!";
+	}
+	else {
+		open $ifh, "<", $syncfile  or die "Could not open file handle, $!";
+	}
+	
         my $pp=get_basic_syncparser();
         my $firstline=<$ifh>;
         chomp $firstline;

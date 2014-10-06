@@ -32,6 +32,7 @@ my $mincoverage=4;
 my $usermaxcoverage;
 my $minlogpvalue=0.0;
 my $removetemp=0;
+my $zippedout=0;
 
 # --input /Users/robertkofler/pub/PoPoolation2/Walkthrough/demo-data/cmh/small-test.sync --output /Users/robertkofler/pub/PoPoolation2/Walkthrough/demo-data/cmh/small-test.cmh --population 1,2,3,4 --min-count 2 --min-coverage 4 --max-coverage 200
 
@@ -45,6 +46,7 @@ GetOptions(
     "select-population=s"  =>\$selectpopulation,
     "min-logpvalue=f"  =>\$minlogpvalue,
     "remove-temp"   =>\$removetemp,
+    "zipped-output"  => \$zippedout,
     "test"          =>\$test,
     "help"	    =>\$help
 ) or pod2usage(-msg=>"Wrong options",-verbose=>1);
@@ -68,6 +70,7 @@ print $pfh "Using min-count\t$mincount\n";
 print $pfh "Using min-coverage\t$mincoverage\n";
 print $pfh "Using max-coverage\t$usermaxcoverage\n";
 print $pfh "Using population\t$userpopulation\n";
+print $pfh "Use zipped output\t$zippedout\n";
 
 if ($selectpopulation) {
 	print $pfh "Using select-population\t$selectpopulation\n";
@@ -108,7 +111,7 @@ print "Calling R, to calculate the Cochran-Mantel-Haenszel test statistic\n";
 system("R --vanilla --slave <$rinput >$routput");
 
 print "Parsing R-output and writing output file\n";
-CMHUtil::write_output($routput,$output,$minlogpvalue);
+CMHUtil::write_output($routput,$output,$minlogpvalue,$zippedout);
 
 if($removetemp)
 {
@@ -133,15 +136,27 @@ exit(0);
 	use Synchronized;
 	use SynchronizeUtility;
 	use MajorAlleles; # get the two major allele
+	use IO::Uncompress::Gunzip;
+	use IO::Compress::Gzip;
 	
 	sub write_output
 	{
 		my $routput=shift;
 		my $output=shift;
 		my $minlogpvalue=shift;
+		my $zippedout=shift;
 		
 		open my $ifh,"<", $routput or die "Could not open input file\n";
-		open my $ofh,">",$output or die "Could not open output file\n";
+		my $ofh=undef;
+		if($zippedout)
+                {
+			$ofh = new IO::Compress::Gzip $output or die "Could not open gzipped output file $output $!";                     
+                }
+                else
+                {
+			open $ofh, ">", $output or die "Could not open output file $output $!";
+
+                }
 		
 		while(1)
 		{
@@ -449,7 +464,14 @@ PERLSUCKS
 		my $third_dim =int(scalar(@$populations)/2);
 		my $dim_str="c(2,2,$third_dim)";
 		
-		open my $ifh, "<", $syncfile or die "Could not open input file";
+		
+		my $ifh = undef;
+		if($syncfile=~/\.gz$/i) {
+			 $ifh = new IO::Uncompress::Gunzip $syncfile or die "Could not open file gzipped file $syncfile  $!";
+		}
+		else {
+			open $ifh, "<", $syncfile  or die "Could not open file handle, $!";
+		}
 		open my $ofh, ">", $rinput or die "Could not open routput file";
 		write_mantelro($ofh);
 		while(my $line=<$ifh>)
@@ -612,6 +634,10 @@ If user user --select-population parameter then only selected populations will b
 =item B<--remove-temp>
 
 flag; remove the temporary files at the end; default=off
+
+=item B<--zipped-output>
+
+flag; the output file should be zipped
 
 =item B<--test>
 
