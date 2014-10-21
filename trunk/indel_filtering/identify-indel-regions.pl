@@ -75,7 +75,7 @@ while(my $line=<$ifh>)
         my $cov=shift @ar;
         my $n=shift @ar;
         my $q=shift @ar;
-        die "mpileup fucked" unless(defined($q));
+        next unless(defined($q));
         $nucs.=$n;
         $total_cov+=$cov;
     }
