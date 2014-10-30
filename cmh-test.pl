@@ -506,10 +506,14 @@ PERLSUCKS
 			my $base=$samples->[$basenr];
 			my $derived=$samples->[$derivednr];
 			
-			push @ar,$base->{$major};
-			push @ar,$derived->{$major};
-			push @ar,$base->{$minor};
-			push @ar,$derived->{$minor};
+			# R complains if sum of stratum is not >1 
+			my($bma,$bmi,$dma,$dmi)=($base->{$major},$base->{$minor},$derived->{$major},$derived->{$minor});
+			if($bma+$bmi+$dma+$dmi<2){$bma++;$dma++;}
+			
+			push @ar,$bma;
+			push @ar,$dma;
+			push @ar,$bmi;
+			push @ar,$dmi;
 		}
 		my $string_all_allele = join(",",@ar);
 		my $popstring="c($string_all_allele)";
