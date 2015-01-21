@@ -165,16 +165,18 @@ exit(0);
 			my $line=<$ifh>;
 			last unless $line;
 			my $pvalue=<$ifh>;
-			chomp $line; chomp $pvalue;
+			my $oddsratio=<$ifh>;
+			chomp $line; chomp $pvalue; chomp $oddsratio;
 			$line=~s/^\S+\s//;
 			$line=~s/^"//;
 			$line=~s/"$//;
 			$line=~s/\\t/\t/g;
 			$pvalue=~s/^\S+\s//;
+			$oddsratio=~s/^\S+\s//;
 			#$pvalue="1.0" if $pvalue eq "NaN"; 	# stupid mantelhaenszeltest prodcues NaN for example mantelhaen.test(array(c(100,100,0,0,100,100,0,0,100,100,0,0),dim=c(2,2,3)),alternative=c("two.sided"))
 								# this is clearly no differentiation thus 1.0 (necessary as it fucks up sorting by significance)
 			next if $pvalue <  $minlogpvalue;
-			print $ofh $line."\t".$pvalue."\n";
+			print $ofh $line."\t".$pvalue."\t".$oddsratio."\n";
 		}
 		close $ofh;
 		close $ifh;
@@ -482,9 +484,14 @@ PERLSUCKS
 			
 			my $pop_str=_get_populationstring($e->{samples},$populations);
 			my $ar_str="array($pop_str,dim=$dim_str)";
-			my $mantel_str="mantelro($ar_str,alternative=c(\"two.sided\"))\$p.valuelog";
+			my $mantel_str="m<-mantelro($ar_str,alternative=c(\"two.sided\"))";
+			my $pvaluestr="m\$p.valuelog";
+			my $oddsstr="m\$estimate[[1]]";
+			#$estimate[[1]]
 			print $ofh "print(\"$line\")\n";
 			print $ofh $mantel_str."\n";
+			print $ofh $pvaluestr."\n";
+			print $ofh $oddsstr."\n";
 		}
 		close $ofh;
 		close $ifh;
@@ -682,9 +689,9 @@ Every pileup file represents a population and will be parsed into a list of A-co
  
 =head2 Output
 
- 2L	5002	G	0:0:0:17:0:0	0:0:0:28:0:0	0:0:0:31:0:0	0:0:0:35:0:0	0:1:0:33:0:0	0:3:0:31:0:0	0.609
- 2L	5009	A	16:0:0:0:0:0	26:0:0:0:0:0	29:0:1:0:0:0	36:0:0:0:0:0	34:0:0:0:0:0	32:0:1:0:0:0	0.957
- 2L	5233	G	0:0:5:46:0:0	0:0:0:43:0:0	0:0:0:60:0:0	0:0:3:61:0:0	0:0:0:56:0:0	0:0:0:48:0:0	0.8088
+ 2L	5002	G	0:0:0:17:0:0	0:0:0:28:0:0	0:0:0:31:0:0	0:0:0:35:0:0	0:1:0:33:0:0	0:3:0:31:0:0	0.609	0.1
+ 2L	5009	A	16:0:0:0:0:0	26:0:0:0:0:0	29:0:1:0:0:0	36:0:0:0:0:0	34:0:0:0:0:0	32:0:1:0:0:0	0.957	0.0
+ 2L	5233	G	0:0:5:46:0:0	0:0:0:43:0:0	0:0:0:60:0:0	0:0:3:61:0:0	0:0:0:56:0:0	0:0:0:48:0:0	0.8088	0.2
 
 
  col 1: reference chromosome
@@ -694,6 +701,7 @@ Every pileup file represents a population and will be parsed into a list of A-co
  col 5: population 2
  col n: population n-3
  col n+1: cmh -log10(p-value)
+ col n+2: log-odds ratio
  Note: If user gives --population  1-13,2-6,3-7 and --select-population 1,13,2,6,3,7 then SNP calling and p-value will be calculated only for selected populations but still all population will be printed in output file just to keep all sync file information.
 
 =head1 Technical details
