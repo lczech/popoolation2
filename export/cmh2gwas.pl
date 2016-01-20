@@ -36,10 +36,13 @@ while(my $line=<$ifh>)
     my $chr=shift @ar;
     my $pos=shift @ar;
     my $pvalue=pop @ar;
-    $pvalue = 10**(-$pvalue);
-    $pvalue=$minpvalue if $pvalue< $minpvalue;
-    print $ofh "$chr\t$pos\tsnp$counter\t$pvalue\n";
-    $counter++;
+    #$pvalue = 10**(-$pvalue);
+    if($pvalue>= $minpvalue)
+    {
+        print $ofh "$chr\t$pos\tsnp$counter\t$pvalue\n";
+        
+        $counter++;
+    }
 }
 close $ofh;
 close $ifh;
@@ -49,10 +52,10 @@ close $ifh;
     #P: p-value for the association (aliases p, pval, p-value, pvalue, p.value)
 
 
-#2R	4459	N	0:55:45:0:0:0	0:40:54:2:0:0	0:55:45:0:0:0	0:40:54:2:0:0	0.01910801
-#2R	9728	N	0:56:44:0:0:0	0:44:55:0:0:0	0:56:44:0:0:0	0:44:55:0:0:0	0.0278406
-#2R	9828	N	0:56:44:0:0:0	1:43:56:0:0:0	0:56:44:0:0:0	1:43:56:0:0:0	0.01637122
-#2R	9928	N	44:0:1:55:0:0	56:0:0:43:0:0	44:0:1:55:0:0	56:0:0:43:0:0	0.02111846
+#2R	4459	N	0:55:45:0:0:0	0:40:54:2:0:0	0:55:45:0:0:0	0:40:54:2:0:0	101
+#2R	9728	N	0:56:44:0:0:0	0:44:55:0:0:0	0:56:44:0:0:0	0:44:55:0:0:0	50
+#2R	9828	N	0:56:44:0:0:0	1:43:56:0:0:0	0:56:44:0:0:0	1:43:56:0:0:0	32
+#2R	9928	N	44:0:1:55:0:0	56:0:0:43:0:0	44:0:1:55:0:0	56:0:0:43:0:0	53
 
 =head1 NAME
 
@@ -76,7 +79,7 @@ The output file. Mandatory parameter
 
 =item B<--min-pvalue>
 
-IGV has some problems displaying very low p-values; Using this option all p-values being smaller than C<--min-pvalue> will be set to C<--min-pvalue>; default=1.0e-20 
+Only display values larger than this (in -log10(pvalue))
 
 =item B<--help>
 
