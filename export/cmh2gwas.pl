@@ -35,6 +35,7 @@ while(my $line=<$ifh>)
     my @ar=split /\t/,$line;
     my $chr=shift @ar;
     my $pos=shift @ar;
+    my $logodds=pop @ar;
     my $pvalue=pop @ar;
     $pvalue = 10**(-$pvalue);
     $pvalue=$minpvalue if $pvalue< $minpvalue;
